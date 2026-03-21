@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Book an emergency mechanic repair.">
+  <meta name="theme-color" content="#06060b">
+  <title>Book Repair — VRS</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="page-container animate-fadeIn">
+    <!-- Header -->
+    <div class="page-header">
+      <button class="btn-icon btn-ghost" onclick="history.back()">←</button>
+      <h1 style="font-size:var(--fs-lg);font-weight:700;">Book Repair</h1>
+      <div style="width:44px;"></div>
+    </div>
+
+    <!-- Emergency Banner -->
+    <div class="card card-emergency mb-lg animate-scaleIn" id="emergencyBanner" style="display:none;">
+      <div class="flex items-center gap-md">
+        <span style="font-size:1.75rem;">🚨</span>
+        <div>
+          <div class="font-bold">Emergency Mode</div>
+          <div class="text-muted" style="font-size:var(--fs-sm);">Priority matching enabled</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 1: Vehicle Selection -->
+    <div class="section">
+      <h2 class="section-title">Select Vehicle</h2>
+      <div class="vehicle-selector" id="vehicleSelector">
+        <div class="vehicle-option selected" data-vehicle="car" onclick="selectVehicle(this)">
+          <span class="vehicle-icon">🚗</span>
+          <span class="vehicle-label">Car</span>
+        </div>
+        <div class="vehicle-option" data-vehicle="bike" onclick="selectVehicle(this)">
+          <span class="vehicle-icon">🏍️</span>
+          <span class="vehicle-label">Bike</span>
+        </div>
+        <div class="vehicle-option" data-vehicle="auto" onclick="selectVehicle(this)">
+          <span class="vehicle-icon">🛺</span>
+          <span class="vehicle-label">Auto</span>
+        </div>
+        <div class="vehicle-option" data-vehicle="truck" onclick="selectVehicle(this)">
+          <span class="vehicle-icon">🚛</span>
+          <span class="vehicle-label">Truck</span>
+        </div>
+        <div class="vehicle-option" data-vehicle="bus" onclick="selectVehicle(this)">
+          <span class="vehicle-icon">🚌</span>
+          <span class="vehicle-label">Bus</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Issue Type -->
+    <div class="section">
+      <h2 class="section-title">What's the Issue?</h2>
+      <div class="issue-grid" id="issueGrid">
+        <div class="issue-option" data-issue="flat-tire" onclick="selectIssue(this)">
+          <span class="issue-icon">🛞</span>
+          <span class="issue-label">Flat Tire</span>
+        </div>
+        <div class="issue-option" data-issue="battery" onclick="selectIssue(this)">
+          <span class="issue-icon">🔋</span>
+          <span class="issue-label">Battery</span>
+        </div>
+        <div class="issue-option" data-issue="engine" onclick="selectIssue(this)">
+          <span class="issue-icon">⚙️</span>
+          <span class="issue-label">Engine</span>
+        </div>
+        <div class="issue-option" data-issue="brake" onclick="selectIssue(this)">
+          <span class="issue-icon">🛑</span>
+          <span class="issue-label">Brakes</span>
+        </div>
+        <div class="issue-option" data-issue="fuel" onclick="selectIssue(this)">
+          <span class="issue-icon">⛽</span>
+          <span class="issue-label">Fuel</span>
+        </div>
+        <div class="issue-option" data-issue="other" onclick="selectIssue(this)">
+          <span class="issue-icon">❓</span>
+          <span class="issue-label">Other</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Description -->
+    <div class="section">
+      <div class="input-group">
+        <label class="input-label" for="issueDesc">Describe your issue (optional)</label>
+        <textarea class="input textarea" id="issueDesc" placeholder="E.g., Car won't start, strange noise from engine..."></textarea>
+      </div>
+    </div>
+
+    <!-- Step 4: Select Mechanic -->
+    <div class="section">
+      <h2 class="section-title">Available Mechanics</h2>
+      <div id="availableMechanics" class="stagger-children">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Pricing Breakdown -->
+    <div class="section" id="pricingSection" style="display:none;">
+      <h2 class="section-title">Price Estimate</h2>
+      <div class="price-breakdown">
+        <div class="price-row">
+          <span class="price-label">Service Charge</span>
+          <span class="price-value" id="serviceCharge">₹500</span>
+        </div>
+        <div class="price-row">
+          <span class="price-label">Visit Fee</span>
+          <span class="price-value" id="visitFee">₹200</span>
+        </div>
+        <div class="price-row">
+          <span class="price-label">Parts (estimated)</span>
+          <span class="price-value" id="partsCost">₹0</span>
+        </div>
+        <div class="price-row total">
+          <span class="price-label">Total Estimate</span>
+          <span class="price-value highlight" id="totalPrice">₹700</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirm Button -->
+    <button class="btn btn-emergency btn-block mb-lg" id="confirmBookingBtn" onclick="confirmBooking()" disabled>
+      Confirm Booking
+    </button>
+
+    <!-- Location Info -->
+    <div class="card mb-lg" style="padding:var(--space-md);">
+      <div class="flex items-center gap-sm">
+        <span>📍</span>
+        <div>
+          <div class="font-semibold" style="font-size:var(--fs-sm);">Your Location</div>
+          <div class="text-muted" style="font-size:var(--fs-xs);" id="userLocation">Detecting location...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-item">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </a>
+    <a href="map.html" class="nav-item">
+      <span class="nav-icon">🗺️</span>
+      <span class="nav-label">Map</span>
+    </a>
+    <a href="ai-diagnosis.html" class="nav-item">
+      <span class="nav-icon">🤖</span>
+      <span class="nav-label">AI</span>
+    </a>
+    <a href="history.html" class="nav-item">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">History</span>
+    </a>
+    <a href="profile.html" class="nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/booking.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await requireAuth();
+      initBookingPage();
+    });
+  </script>
+</body>
+</html>

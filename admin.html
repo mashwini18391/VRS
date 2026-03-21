@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="VRS Admin Dashboard — Manage mechanics, reviews, and bookings.">
+  <meta name="theme-color" content="#06060b">
+  <title>Admin Dashboard — VRS</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Desktop Nav -->
+  <nav class="desktop-nav" id="desktopNav">
+    <div class="desktop-nav-logo">⚡ VRS Admin</div>
+    <div class="desktop-nav-links">
+      <a href="admin.html" class="active">Admin</a>
+      <a href="dashboard.html">User Dashboard</a>
+      <a href="map.html">Map</a>
+    </div>
+  </nav>
+
+  <div class="page-container animate-fadeIn" id="adminPage">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <p class="text-muted" style="font-size:var(--fs-sm);">Administration</p>
+        <h1 class="page-title">🛡️ Admin Dashboard</h1>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="section">
+      <div class="admin-stats-grid stagger-children" id="adminStats">
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon" style="background:rgba(34,197,94,0.15);color:#22c55e;">✅</div>
+          <div class="admin-stat-info">
+            <div class="admin-stat-value" id="statVerified">0</div>
+            <div class="admin-stat-label">Verified Mechanics</div>
+          </div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b;">⏳</div>
+          <div class="admin-stat-info">
+            <div class="admin-stat-value" id="statPending">0</div>
+            <div class="admin-stat-label">Pending Approvals</div>
+          </div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon" style="background:rgba(239,68,68,0.15);color:#ef4444;">🚩</div>
+          <div class="admin-stat-info">
+            <div class="admin-stat-value" id="statFlagged">0</div>
+            <div class="admin-stat-label">Flagged Reviews</div>
+          </div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6;">📋</div>
+          <div class="admin-stat-info">
+            <div class="admin-stat-value" id="statBookings">0</div>
+            <div class="admin-stat-label">Total Bookings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="section">
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="switchAdminTab('mechanics')" id="tabMechanics">🔧 Mechanics</button>
+        <button class="admin-tab" onclick="switchAdminTab('reviews')" id="tabReviews">⭐ Reviews</button>
+        <button class="admin-tab" onclick="switchAdminTab('bookings')" id="tabBookings">📋 Bookings</button>
+      </div>
+    </div>
+
+    <!-- Mechanics Panel -->
+    <div class="section admin-panel" id="panelMechanics">
+      <div class="flex justify-between items-center mb-md">
+        <h2 class="section-title" style="margin-bottom:0;">Mechanic Verification</h2>
+        <div class="admin-filter-group">
+          <button class="btn btn-sm btn-primary" onclick="filterMechanics('all')">All</button>
+          <button class="btn btn-sm btn-outline" onclick="filterMechanics('pending')">Pending</button>
+          <button class="btn btn-sm btn-outline" onclick="filterMechanics('verified')">Verified</button>
+        </div>
+      </div>
+      <div id="mechanicsList" class="stagger-children">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Reviews Panel -->
+    <div class="section admin-panel hidden" id="panelReviews">
+      <div class="flex justify-between items-center mb-md">
+        <h2 class="section-title" style="margin-bottom:0;">Review Management</h2>
+        <div class="admin-filter-group">
+          <button class="btn btn-sm btn-primary" onclick="filterReviews('all')">All</button>
+          <button class="btn btn-sm btn-outline" onclick="filterReviews('flagged')">Flagged</button>
+        </div>
+      </div>
+      <div id="reviewsList" class="stagger-children">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Bookings Panel -->
+    <div class="section admin-panel hidden" id="panelBookings">
+      <div class="flex justify-between items-center mb-md">
+        <h2 class="section-title" style="margin-bottom:0;">Booking Monitor</h2>
+      </div>
+      <div id="bookingsList" class="stagger-children">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

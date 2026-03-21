@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Your VRS profile and settings.">
+  <meta name="theme-color" content="#06060b">
+  <title>Profile — VRS</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Desktop Nav -->
+  <nav class="desktop-nav">
+    <div class="desktop-nav-logo">⚡ VRS</div>
+    <div class="desktop-nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="map.html">Map</a>
+      <a href="history.html">History</a>
+      <a href="ai-diagnosis.html">AI Assist</a>
+      <a href="profile.html" class="active">Profile</a>
+    </div>
+  </nav>
+
+  <div class="page-container animate-fadeIn">
+    <!-- Profile Header -->
+    <div class="profile-header">
+      <div class="profile-avatar">
+        <img id="profileAvatar" src="" alt="Profile Photo">
+      </div>
+      <h2 class="profile-name" id="profileName">Loading...</h2>
+      <p class="profile-email" id="profileEmail">loading@email.com</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="flex justify-between mb-lg" style="gap:var(--space-sm);">
+      <div class="card text-center flex-1" style="padding:var(--space-md);">
+        <div style="font-size:var(--fs-xl);font-weight:800;color:var(--emergency-blue);">12</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-tertiary);">Total Repairs</div>
+      </div>
+      <div class="card text-center flex-1" style="padding:var(--space-md);">
+        <div style="font-size:var(--fs-xl);font-weight:800;color:var(--warning);">4.8</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-tertiary);">Avg Rating</div>
+      </div>
+      <div class="card text-center flex-1" style="padding:var(--space-md);">
+        <div style="font-size:var(--fs-xl);font-weight:800;color:var(--success);">₹18K</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-tertiary);">Total Spent</div>
+      </div>
+    </div>
+
+    <!-- My Vehicles -->
+    <div class="section">
+      <div class="flex justify-between items-center mb-md">
+        <h2 class="section-title" style="margin-bottom:0;">My Vehicles</h2>
+        <button class="btn btn-ghost btn-sm" onclick="showToast('Add vehicle feature coming soon', 'info')">+ Add</button>
+      </div>
+      <div class="card mb-md" style="padding:var(--space-md);">
+        <div class="flex items-center gap-md">
+          <span style="font-size:1.5rem;">🚗</span>
+          <div class="flex-1">
+            <div class="font-semibold">Hyundai i20</div>
+            <div class="text-muted" style="font-size:var(--fs-sm);">2022 • MH-12-AB-1234</div>
+          </div>
+          <span class="badge badge-active">Active</span>
+        </div>
+      </div>
+      <div class="card" style="padding:var(--space-md);">
+        <div class="flex items-center gap-md">
+          <span style="font-size:1.5rem;">🏍️</span>
+          <div class="flex-1">
+            <div class="font-semibold">Honda Activa</div>
+            <div class="text-muted" style="font-size:var(--fs-sm);">2023 • MH-12-CD-5678</div>
+          </div>
+          <span class="badge badge-active">Active</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="section">
+      <h2 class="section-title">Settings</h2>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="settings-item">
+          <div class="settings-left">
+            <div class="settings-icon">🔔</div>
+            <span class="settings-label">Notifications</span>
+          </div>
+          <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+        </div>
+        <div class="settings-item">
+          <div class="settings-left">
+            <div class="settings-icon">📍</div>
+            <span class="settings-label">Location Sharing</span>
+          </div>
+          <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+        </div>
+        <div class="settings-item">
+          <div class="settings-left">
+            <div class="settings-icon">🌙</div>
+            <span class="settings-label">Dark Mode</span>
+          </div>
+          <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+        </div>
+        <div class="settings-item">
+          <div class="settings-left">
+            <div class="settings-icon">🔒</div>
+            <span class="settings-label">Privacy</span>
+          </div>
+          <span class="settings-arrow">→</span>
+        </div>
+        <div class="settings-item">
+          <div class="settings-left">
+            <div class="settings-icon">❓</div>
+            <span class="settings-label">Help & Support</span>
+          </div>
+          <span class="settings-arrow">→</span>
+        </div>
+        <div class="settings-item">
+          <div class="settings-left">
+            <div class="settings-icon">ℹ️</div>
+            <span class="settings-label">About VRS</span>
+          </div>
+          <span class="settings-arrow">→</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logout -->
+    <button class="btn btn-outline btn-block mb-lg" style="border-color:var(--emergency-red);color:var(--emergency-red);" onclick="handleSignOut()">
+      🚪 Sign Out
+    </button>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-item"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></a>
+    <a href="map.html" class="nav-item"><span class="nav-icon">🗺️</span><span class="nav-label">Map</span></a>
+    <a href="ai-diagnosis.html" class="nav-item"><span class="nav-icon">🤖</span><span class="nav-label">AI</span></a>
+    <a href="history.html" class="nav-item"><span class="nav-icon">📋</span><span class="nav-label">History</span></a>
+    <a href="profile.html" class="nav-item active"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></a>
+  </nav>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await requireAuth();
+      if (user) {
+        document.getElementById('profileName').textContent = user.user_metadata?.full_name || 'User';
+        document.getElementById('profileEmail').textContent = user.email || '';
+        const avatar = user.user_metadata?.avatar_url;
+        if (avatar) {
+          document.getElementById('profileAvatar').src = avatar;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

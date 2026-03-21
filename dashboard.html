@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="VRS Dashboard — Manage your emergency repair requests.">
+  <meta name="theme-color" content="#06060b">
+  <title>Dashboard — VRS</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Desktop Nav -->
+  <nav class="desktop-nav" id="desktopNav">
+    <div class="desktop-nav-logo">⚡ VRS</div>
+    <div class="desktop-nav-links">
+      <a href="dashboard.html" class="active">Dashboard</a>
+      <a href="map.html">Map</a>
+      <a href="history.html">History</a>
+      <a href="ai-diagnosis.html">AI Assist</a>
+      <a href="profile.html">Profile</a>
+    </div>
+    <div class="desktop-nav-profile">
+      <img id="desktopAvatar" src="" alt="" style="width:32px;height:32px;border-radius:50%;" class="hidden">
+    </div>
+  </nav>
+
+  <div class="page-container animate-fadeIn" id="dashboardPage">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <p class="text-muted" style="font-size:var(--fs-sm);">Welcome back</p>
+        <h1 class="page-title" id="userName">Loading...</h1>
+      </div>
+      <a href="profile.html" id="userAvatarLink">
+        <div class="profile-avatar" style="width:44px;height:44px;margin:0;border-width:2px;">
+          <img id="userAvatar" src="" alt="Profile" style="width:100%;height:100%;object-fit:cover;">
+        </div>
+      </a>
+    </div>
+
+    <!-- Active Request -->
+    <div id="activeRequestSection" class="section hidden">
+      <div class="active-request-card animate-scaleIn">
+        <div class="request-status-bar">
+          <div class="status-dot"></div>
+          <span class="status-text" id="requestStatus">Mechanic En Route</span>
+        </div>
+        <div class="flex items-center gap-md mb-md" style="position:relative;">
+          <div class="mechanic-avatar">🔧</div>
+          <div class="mechanic-info">
+            <div class="mechanic-name" id="activeMechanicName">Rajesh Kumar</div>
+            <div class="mechanic-specialty" id="activeMechanicSpecialty">Engine Specialist</div>
+          </div>
+          <div class="mechanic-eta">
+            <div class="mechanic-eta-value" id="activeETA">8</div>
+            <div class="mechanic-eta-label">min ETA</div>
+          </div>
+        </div>
+        <div class="flex gap-sm">
+          <a href="tracking.html" class="btn btn-primary btn-sm flex-1">📍 Track</a>
+          <a href="chat.html" class="btn btn-outline btn-sm flex-1">💬 Chat</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="section">
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="quick-actions-grid stagger-children">
+        <a href="map.html" class="action-card">
+          <div class="action-icon red">🚨</div>
+          <span class="action-label">Emergency Request</span>
+        </a>
+        <a href="map.html" class="action-card">
+          <div class="action-icon blue">🗺️</div>
+          <span class="action-label">Find Mechanics</span>
+        </a>
+        <a href="ai-diagnosis.html" class="action-card">
+          <div class="action-icon green">🤖</div>
+          <span class="action-label">AI Diagnosis</span>
+        </a>
+        <a href="history.html" class="action-card">
+          <div class="action-icon yellow">📋</div>
+          <span class="action-label">Repair History</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="section">
+      <div class="flex justify-between items-center mb-md">
+        <h2 class="section-title" style="margin-bottom:0;">Recent Activity</h2>
+        <a href="history.html" class="btn btn-ghost btn-sm">View All →</a>
+      </div>
+      <div id="recentActivity" class="stagger-children">
+        <!-- Populated by JS -->
+      </div>
+      <div id="emptyActivity" class="empty-state hidden">
+        <div class="empty-state-icon">🔧</div>
+        <div class="empty-state-title">No Activity Yet</div>
+        <p class="empty-state-text">Your repair requests will appear here.</p>
+        <a href="map.html" class="btn btn-primary">Find Nearby Mechanics</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Emergency Button -->
+  <button class="fab-emergency" id="fabEmergency" onclick="window.location.href='booking.html?emergency=true'">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  </button>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav" id="bottomNav">
+    <a href="dashboard.html" class="nav-item active">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </a>
+    <a href="map.html" class="nav-item">
+      <span class="nav-icon">🗺️</span>
+      <span class="nav-label">Map</span>
+    </a>
+    <a href="ai-diagnosis.html" class="nav-item">
+      <span class="nav-icon">🤖</span>
+      <span class="nav-label">AI</span>
+    </a>
+    <a href="history.html" class="nav-item">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">History</span>
+    </a>
+    <a href="profile.html" class="nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await requireAuth();
+      if (user) {
+        document.getElementById('userName').textContent = user.user_metadata?.full_name || 'User';
+        const avatar = user.user_metadata?.avatar_url;
+        if (avatar) {
+          document.getElementById('userAvatar').src = avatar;
+          const deskAvatar = document.getElementById('desktopAvatar');
+          deskAvatar.src = avatar;
+          deskAvatar.classList.remove('hidden');
+        }
+        loadDashboardData();
+      }
+    });
+
+    function loadDashboardData() {
+      // Show dummy active request
+      document.getElementById('activeRequestSection').classList.remove('hidden');
+
+      // Load recent activity
+      const recentActivity = document.getElementById('recentActivity');
+      const dummyHistory = [
+        { date: '2 days ago', issue: 'Flat Tire Replacement', mechanic: 'Ajay Singh', cost: '₹1,200', status: 'completed' },
+        { date: '1 week ago', issue: 'Battery Jump Start', mechanic: 'Priya Patel', cost: '₹800', status: 'completed' },
+        { date: '2 weeks ago', issue: 'Engine Overheating', mechanic: 'Rahul Mehta', cost: '₹3,500', status: 'completed' },
+      ];
+
+      recentActivity.innerHTML = dummyHistory.map(item => `
+        <div class="history-card mb-md">
+          <div class="history-header">
+            <span class="badge badge-${item.status}">${item.status}</span>
+            <span class="history-date">${item.date}</span>
+          </div>
+          <div class="history-body">
+            <div class="history-issue">${item.issue}</div>
+            <div class="history-mechanic">🔧 ${item.mechanic}</div>
+          </div>
+          <div class="history-footer">
+            <div class="rating-display">
+              <span class="rating-value">⭐ 4.5</span>
+            </div>
+            <span class="history-cost">${item.cost}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

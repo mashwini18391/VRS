@@ -1,0 +1,92 @@
+/* ═══════════════════════════════════════════════════
+   VRS Design Tokens — Dark Emergency Theme
+   ═══════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  /* ── Background ── */
+  --bg-primary: #06060b;
+  --bg-secondary: #0c0c14;
+  --bg-surface: #12121e;
+  --bg-elevated: #1a1a2e;
+  --bg-overlay: rgba(6, 6, 11, 0.85);
+
+  /* ── Emergency Colors ── */
+  --emergency-red: #ff2d55;
+  --emergency-red-glow: rgba(255, 45, 85, 0.35);
+  --emergency-red-soft: rgba(255, 45, 85, 0.12);
+  --emergency-blue: #007aff;
+  --emergency-blue-glow: rgba(0, 122, 255, 0.35);
+  --emergency-blue-soft: rgba(0, 122, 255, 0.12);
+
+  /* ── Accent & Status ── */
+  --accent-gradient: linear-gradient(135deg, #ff2d55, #ff6b35);
+  --blue-gradient: linear-gradient(135deg, #007aff, #5ac8fa);
+  --success: #30d158;
+  --success-soft: rgba(48, 209, 88, 0.12);
+  --warning: #ffcc00;
+  --warning-soft: rgba(255, 204, 0, 0.12);
+  --info: #64d2ff;
+
+  /* ── Text ── */
+  --text-primary: #f5f5f7;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #6b6b76;
+  --text-inverse: #06060b;
+
+  /* ── Borders ── */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+
+  /* ── Typography ── */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --fs-xs: 0.6875rem;    /* 11px */
+  --fs-sm: 0.8125rem;    /* 13px */
+  --fs-base: 0.9375rem;  /* 15px */
+  --fs-md: 1.0625rem;    /* 17px */
+  --fs-lg: 1.25rem;      /* 20px */
+  --fs-xl: 1.5rem;       /* 24px */
+  --fs-2xl: 1.875rem;    /* 30px */
+  --fs-3xl: 2.25rem;     /* 36px */
+  --fs-display: 3rem;    /* 48px */
+
+  /* ── Spacing ── */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+
+  /* ── Radius ── */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+  --shadow-emergency: 0 0 30px var(--emergency-red-glow);
+  --shadow-blue: 0 0 30px var(--emergency-blue-glow);
+
+  /* ── Transitions ── */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Z-Index ── */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-fab: 500;
+  --z-toast: 600;
+}
