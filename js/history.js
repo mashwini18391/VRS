@@ -3,24 +3,49 @@
    ═══════════════════════════════════════════════════ */
 
 let currentFilter = 'all';
+let currentHistory = [];
 
 /**
  * Load repair history
  */
-function loadHistory(filter = 'all') {
+async function loadHistory(filter = 'all') {
   currentFilter = filter;
   const container = document.getElementById('historyList');
   const emptyState = document.getElementById('emptyHistory');
   if (!container) return;
 
-  let history = [...DUMMY_HISTORY];
-
-  // Apply filter
-  if (filter !== 'all') {
-    history = history.filter(h => h.status === filter);
+  try {
+    const userId = localStorage.getItem('user_id') || 'demo-user-123';
+    const res = await fetch(`/api/bookings/user/${userId}`);
+    const data = await res.json();
+    
+    if (data.success) {
+      currentHistory = data.bookings.map(b => ({
+        id: b.id,
+        status: b.status,
+        date: b.created_at,
+        issue: b.issue_description || b.service_name || 'General Repair',
+        mechanic: b.mechanic_name || 'Unknown Mechanic',
+        vehicle: b.vehicle_type || 'car',
+        cost: parseFloat(b.total_price) || 0,
+        rating: null,
+        review: null
+      }));
+    } else {
+      currentHistory = [];
+    }
+  } catch (err) {
+    console.error('Failed to fetch history:', err);
+    currentHistory = [];
   }
 
-  if (history.length === 0) {
+  // Apply filter
+  let displayHistory = currentHistory;
+  if (filter !== 'all') {
+    displayHistory = displayHistory.filter(h => h.status === filter);
+  }
+
+  if (displayHistory.length === 0) {
     container.innerHTML = '';
     if (emptyState) emptyState.classList.remove('hidden');
     return;
@@ -28,7 +53,7 @@ function loadHistory(filter = 'all') {
 
   if (emptyState) emptyState.classList.add('hidden');
 
-  container.innerHTML = history.map((item, index) => `
+  container.innerHTML = displayHistory.map((item, index) => `
     <div class="history-card mb-md animate-slideUp" style="animation-delay:${index * 60}ms;" onclick="viewBookingDetail('${item.id}')">
       <div class="history-header">
         <span class="badge badge-${item.status}">${item.status}</span>
@@ -41,7 +66,7 @@ function loadHistory(filter = 'all') {
       <div class="history-footer">
         ${item.rating ? `
           <div class="rating-display">
-            <span class="rating-value">⭐ ${item.rating}.0</span>
+            <span class="rating-value">★ ${item.rating}.0</span>
           </div>
         ` : '<span></span>'}
         <span class="history-cost">${item.cost > 0 ? formatCurrency(item.cost) : '—'}</span>
@@ -59,7 +84,6 @@ function loadHistory(filter = 'all') {
  * Filter history by status
  */
 function filterHistory(status, buttonEl) {
-  // Update button styles
   document.querySelectorAll('[data-filter]').forEach(btn => {
     btn.className = 'btn btn-sm btn-outline';
   });
@@ -71,13 +95,12 @@ function filterHistory(status, buttonEl) {
 }
 
 /**
- * View booking detail (modal or separate page)
+ * View booking detail
  */
 function viewBookingDetail(bookingId) {
-  const booking = DUMMY_HISTORY.find(h => h.id === bookingId);
+  const booking = currentHistory.find(h => h.id === bookingId);
   if (!booking) return;
 
-  // Show a modal with details
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.onclick = (e) => {
@@ -122,7 +145,7 @@ function viewBookingDetail(bookingId) {
       ${booking.rating ? `
         <div class="card mb-lg" style="padding:var(--space-md);">
           <div class="flex items-center gap-sm mb-sm">
-            <span style="font-size:1.25rem;">⭐</span>
+            <span style="font-size:1.25rem;">★</span>
             <strong>Your Review</strong>
             <span class="rating-value" style="margin-left:auto;">${booking.rating}.0</span>
           </div>
@@ -130,7 +153,7 @@ function viewBookingDetail(bookingId) {
         </div>
       ` : `
         <button class="btn btn-outline btn-block mb-md" onclick="this.closest('.modal-overlay').remove(); showToast('Review feature coming soon', 'info');">
-          ⭐ Write a Review
+          ★ Write a Review
         </button>
       `}
 

@@ -301,3 +301,57 @@ function renderBookings(bookings) {
     </div>
   `).join('');
 }
+
+// ── Add Mechanic Modal ──
+
+function showAddMechanicModal() {
+  const modal = document.getElementById('addMechanicModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeAddMechanicModal() {
+  const modal = document.getElementById('addMechanicModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.getElementById('addMechanicForm').reset();
+  }
+}
+
+async function submitAddMechanic(e) {
+  e.preventDefault();
+  const btn = document.getElementById('addMechanicBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  const newMechanic = {
+    name: document.getElementById('mechName').value,
+    phone: document.getElementById('mechPhone').value,
+    specialization: document.getElementById('mechSpec').value,
+    latitude: document.getElementById('mechLat').value,
+    longitude: document.getElementById('mechLng').value,
+    verified: document.getElementById('mechVerified').checked
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/mechanics`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newMechanic)
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      showToast('Mechanic added successfully', 'success');
+      closeAddMechanicModal();
+      loadMechanics('all');
+      loadStats();
+    } else {
+      showToast(data.error || 'Failed to add mechanic', 'error');
+    }
+  } catch (err) {
+    showToast('Network error, could not add mechanic', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Mechanic';
+  }
+}

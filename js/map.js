@@ -8,6 +8,7 @@ let mechanicMarkers = [];
 let userLat = 18.5204; // Default: Pune, India
 let userLng = 73.8567;
 let mechanicsWithDistance = [];
+let filteredMechanics = [];
 
 /**
  * Initialize the map
@@ -26,6 +27,20 @@ function initMap() {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19,
   }).addTo(map);
+
+  // Grab the search input
+  const searchInput = document.getElementById('mapSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      filteredMechanics = mechanicsWithDistance.filter(m => 
+        m.name.toLowerCase().includes(searchTerm) || 
+        m.specialization.toLowerCase().includes(searchTerm)
+      );
+      renderMechanicsOnMap();
+      renderMechanicsList();
+    });
+  }
 
   // Get user location (GPS only — no manual input)
   getUserLocation();
@@ -98,23 +113,42 @@ function addUserMarker(lat, lng) {
  * Load nearby mechanics and show on map
  * Only shows VERIFIED mechanics
  */
-function loadNearbyMechanics() {
+async function loadNearbyMechanics() {
   // Clear existing markers
   mechanicMarkers.forEach(m => map.removeLayer(m));
   mechanicMarkers = [];
 
-  // Filter only verified + available mechanics
-  mechanicsWithDistance = DUMMY_MECHANICS
-    .filter(m => m.is_available && m.verified)
-    .map(m => ({
-      ...m,
-      distance: haversineDistance(userLat, userLng, m.latitude, m.longitude),
-      eta: estimateETA(haversineDistance(userLat, userLng, m.latitude, m.longitude))
-    }))
-    .sort((a, b) => a.distance - b.distance);
+  try {
+    const res = await fetch(`/api/mechanics/nearby?lat=${userLat}&lng=${userLng}`);
+    const data = await res.json();
+
+    if (data.success) {
+      mechanicsWithDistance = data.mechanics;
+      filteredMechanics = [...mechanicsWithDistance];
+    } else {
+      mechanicsWithDistance = [];
+      filteredMechanics = [];
+    }
+  } catch (err) {
+    console.error('Failed to load mechanics:', err);
+    mechanicsWithDistance = [];
+    filteredMechanics = [];
+  }
+
+  renderMechanicsOnMap();
+  renderMechanicsList();
+}
+
+/**
+ * Render mechanics on the map
+ */
+function renderMechanicsOnMap() {
+  // Clear existing markers
+  mechanicMarkers.forEach(m => map.removeLayer(m));
+  mechanicMarkers = [];
 
   // Add mechanic markers with verified badges
-  mechanicsWithDistance.forEach(mechanic => {
+  filteredMechanics.forEach(mechanic => {
     const mechanicIcon = L.divIcon({
       className: 'mechanic-marker-wrapper',
       html: `<div class="mechanic-marker">🔧</div>`,
@@ -135,6 +169,7 @@ function loadNearbyMechanics() {
           <span style="background:#22c55e;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;">✓ Verified</span>
         </div>
         <span style="color:#a1a1aa;font-size:12px;">${mechanic.specialization}</span><br>
+        <span style="font-size:12px;">📞 ${mechanic.phone || 'N/A'}</span><br>
         <span style="font-size:12px;">${stars} ${mechanic.rating} (${mechanic.total_reviews} reviews)</span><br>
         <div style="display:flex;align-items:center;gap:4px;margin:4px 0;">
           <span style="font-size:11px;color:${trustLevel === 'high' ? '#22c55e' : trustLevel === 'medium' ? '#f59e0b' : '#ef4444'};">🛡️ Trust: ${mechanic.trust_score}/10</span>
@@ -150,10 +185,7 @@ function loadNearbyMechanics() {
 
   // Update count
   const countEl = document.getElementById('mechanicCount');
-  if (countEl) countEl.textContent = mechanicsWithDistance.length;
-
-  // Render mechanics list
-  renderMechanicsList();
+  if (countEl) countEl.textContent = filteredMechanics.length;
 }
 
 /**
@@ -163,7 +195,12 @@ function renderMechanicsList() {
   const container = document.getElementById('mechanicsList');
   if (!container) return;
 
-  container.innerHTML = mechanicsWithDistance.map(m => `
+  if (filteredMechanics.length === 0) {
+    container.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted);">No mechanics found.</div>`;
+    return;
+  }
+
+  container.innerHTML = filteredMechanics.map(m => `
     <div class="mechanic-card mb-md" onclick="window.location.href='booking.html?mechanic=${m.id}'">
       <div class="mechanic-avatar">${m.name.charAt(0)}</div>
       <div class="mechanic-info">
@@ -171,7 +208,7 @@ function renderMechanicsList() {
           ${m.name}
           ${m.verified ? '<span class="verified-badge">✅ Verified</span>' : '<span class="unverified-badge">⚠️</span>'}
         </div>
-        <div class="mechanic-specialty">${m.specialization}</div>
+        <div class="mechanic-specialty">${m.specialization} &bull; 📞 ${m.phone || 'N/A'}</div>
         <div class="mechanic-meta">
           <span class="mechanic-rating">⭐ ${m.rating} (${m.total_reviews})</span>
           <span class="mechanic-distance">📍 ${formatDistance(m.distance)}</span>

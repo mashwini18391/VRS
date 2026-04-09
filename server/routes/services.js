@@ -1,39 +1,44 @@
-/* ═══════════════════════════════════════════════════
-   VRS API — Services & Pricing Routes
-   ═══════════════════════════════════════════════════ */
+/* ===================================================
+   VRS API - Services Routes
+   Dynamic Pricing & Availability
+   =================================================== */
 
 const express = require('express');
 const router = express.Router();
 
-// Services catalog with pricing
-const SERVICES = [
-  { id: 1, name: 'Flat Tire Repair', category: 'tire', base_price: 500, description: 'Puncture repair or spare tire mounting', estimated_time_minutes: 30 },
-  { id: 2, name: 'Tire Replacement', category: 'tire', base_price: 3500, description: 'New tire fitting and balancing', estimated_time_minutes: 45 },
-  { id: 3, name: 'Battery Jump Start', category: 'battery', base_price: 800, description: 'Battery jump start with portable booster', estimated_time_minutes: 20 },
-  { id: 4, name: 'Battery Replacement', category: 'battery', base_price: 4500, description: 'Old battery removal and new battery installation', estimated_time_minutes: 30 },
-  { id: 5, name: 'Engine Diagnosis', category: 'engine', base_price: 1500, description: 'OBD-II scan and engine fault diagnosis', estimated_time_minutes: 60 },
-  { id: 6, name: 'Engine Oil Change', category: 'engine', base_price: 1200, description: 'Complete engine oil and filter change', estimated_time_minutes: 45 },
-  { id: 7, name: 'Brake Pad Replacement', category: 'brake', base_price: 2500, description: 'Front or rear brake pad replacement', estimated_time_minutes: 90 },
-  { id: 8, name: 'Brake Fluid Refill', category: 'brake', base_price: 600, description: 'Brake fluid top-up and bleeding', estimated_time_minutes: 30 },
-  { id: 9, name: 'Emergency Fuel Delivery', category: 'fuel', base_price: 600, description: '5L emergency fuel delivery', estimated_time_minutes: 25 },
-  { id: 10, name: 'Towing Service', category: 'other', base_price: 2000, description: 'Vehicle towing up to 20km', estimated_time_minutes: 45 },
-  { id: 11, name: 'AC Gas Refill', category: 'other', base_price: 1800, description: 'AC refrigerant recharge', estimated_time_minutes: 40 },
-  { id: 12, name: 'Coolant Refill', category: 'other', base_price: 500, description: 'Engine coolant top-up', estimated_time_minutes: 15 },
-  { id: 13, name: 'Spark Plug Replacement', category: 'engine', base_price: 800, description: 'Spark plug inspection and replacement', estimated_time_minutes: 30 },
-  { id: 14, name: 'Headlight/Taillight Fix', category: 'other', base_price: 400, description: 'Bulb replacement for headlights or taillights', estimated_time_minutes: 20 },
+const db = require('../db');
+
+// Fallback data when DB is missing
+const mockServices = [
+  { id: 1, name: 'Flat Tire Repair', category: 'tire', base_price: 500.00, description: 'Puncture repair or spare tire mounting', estimated_time_minutes: 30, is_active: true },
+  { id: 2, name: 'Tire Replacement', category: 'tire', base_price: 3500.00, description: 'New tire fitting and balancing', estimated_time_minutes: 45, is_active: true },
+  { id: 3, name: 'Battery Jump Start', category: 'battery', base_price: 800.00, description: 'Battery jump start with portable booster', estimated_time_minutes: 20, is_active: true },
+  { id: 4, name: 'Battery Replacement', category: 'battery', base_price: 4500.00, description: 'Old battery removal and new battery installation', estimated_time_minutes: 30, is_active: true },
+  { id: 5, name: 'Engine Diagnosis', category: 'engine', base_price: 1500.00, description: 'OBD-II scan and engine fault diagnosis', estimated_time_minutes: 60, is_active: true }
 ];
 
 /**
  * GET /api/services — List all services
  * Optional query: category
  */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { category } = req.query;
-    let services = [...SERVICES];
-
+    
+    let queryArgs = [];
+    let sql = 'SELECT * FROM services WHERE is_active = TRUE';
+    
     if (category) {
-      services = services.filter(s => s.category === category);
+      sql += ' AND category = ?';
+      queryArgs.push(category);
+    }
+
+    let services = [];
+    try {
+      services = await db.query(sql, queryArgs);
+    } catch (dbErr) {
+      console.warn('DB error, using fallback services:', dbErr.message);
+      services = category ? mockServices.filter(s => s.category === category) : mockServices;
     }
 
     // Group by category
@@ -58,21 +63,34 @@ router.get('/', (req, res) => {
 /**
  * GET /api/services/:id — Get service detail with pricing
  */
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const service = SERVICES.find(s => s.id === parseInt(req.params.id));
-
-    if (!service) {
+    const id = parseInt(req.params.id);
+    
+    let services = [];
+    try {
+      services = await db.query('SELECT * FROM services WHERE id = ? AND is_active = TRUE', [id]);
+    } catch (dbErr) {
+      console.warn('DB error, using fallback service:', dbErr.message);
+      const s = mockServices.find(s => s.id === id);
+      if (s) services = [s];
+    }
+    
+    if (services.length === 0) {
       return res.status(404).json({ error: 'Service not found' });
     }
 
+    const service = services[0];
+
     // Add pricing breakdown
     const visitFee = 200;
+    // Base price in DB is string/decimal, need to parse
+    const basePrice = parseFloat(service.base_price);
     const pricing = {
-      service_charge: service.base_price,
+      service_charge: basePrice,
       visit_fee: visitFee,
-      gst: Math.round((service.base_price + visitFee) * 0.18),
-      total: Math.round((service.base_price + visitFee) * 1.18)
+      gst: Math.round((basePrice + visitFee) * 0.18),
+      total: Math.round((basePrice + visitFee) * 1.18)
     };
 
     res.json({ success: true, service: { ...service, pricing } });

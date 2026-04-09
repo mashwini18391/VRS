@@ -150,50 +150,84 @@
   <script src="js/app.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
+      // Small delay to ensure SDK is ready
       const user = await requireAuth();
+      
       if (user) {
         document.getElementById('userName').textContent = user.user_metadata?.full_name || 'User';
-        const avatar = user.user_metadata?.avatar_url;
+        const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
         if (avatar) {
           document.getElementById('userAvatar').src = avatar;
           const deskAvatar = document.getElementById('desktopAvatar');
           deskAvatar.src = avatar;
           deskAvatar.classList.remove('hidden');
         }
-        loadDashboardData();
+        loadDashboardData(user.id);
       }
     });
 
-    function loadDashboardData() {
-      // Show dummy active request
-      document.getElementById('activeRequestSection').classList.remove('hidden');
+    async function loadDashboardData(userId) {
+      try {
+        const res = await fetch(`/api/bookings/user/${userId}`);
+        const data = await res.json();
+        
+        const activeSection = document.getElementById('activeRequestSection');
+        const recentActivity = document.getElementById('recentActivity');
+        const emptyActivity = document.getElementById('emptyActivity');
 
-      // Load recent activity
-      const recentActivity = document.getElementById('recentActivity');
-      const dummyHistory = [
-        { date: '2 days ago', issue: 'Flat Tire Replacement', mechanic: 'Ajay Singh', cost: '₹1,200', status: 'completed' },
-        { date: '1 week ago', issue: 'Battery Jump Start', mechanic: 'Priya Patel', cost: '₹800', status: 'completed' },
-        { date: '2 weeks ago', issue: 'Engine Overheating', mechanic: 'Rahul Mehta', cost: '₹3,500', status: 'completed' },
-      ];
-
-      recentActivity.innerHTML = dummyHistory.map(item => `
-        <div class="history-card mb-md">
-          <div class="history-header">
-            <span class="badge badge-${item.status}">${item.status}</span>
-            <span class="history-date">${item.date}</span>
-          </div>
-          <div class="history-body">
-            <div class="history-issue">${item.issue}</div>
-            <div class="history-mechanic">🔧 ${item.mechanic}</div>
-          </div>
-          <div class="history-footer">
-            <div class="rating-display">
-              <span class="rating-value">⭐ 4.5</span>
-            </div>
-            <span class="history-cost">${item.cost}</span>
-          </div>
-        </div>
-      `).join('');
+        if (data.success && data.bookings.length > 0) {
+          // Check for active booking
+          const activeStates = ['pending', 'accepted', 'on_way', 'arrived'];
+          const activeBooking = data.bookings.find(b => activeStates.includes(b.status));
+          
+          if (activeBooking) {
+            activeSection.classList.remove('hidden');
+            document.getElementById('requestStatus').textContent = activeBooking.status.replace('_', ' ').toUpperCase();
+            document.getElementById('activeMechanicName').textContent = activeBooking.mechanic_name || 'Finding Mechanic...';
+            document.getElementById('activeMechanicSpecialty').textContent = activeBooking.service_name || activeBooking.issue_description || 'General Service';
+            
+            // Fix track link and chat link
+            const trackBtn = activeSection.querySelector('a[href="tracking.html"]');
+            if (trackBtn) trackBtn.href = `map.html?booking=${activeBooking.id}`;
+            const chatBtn = activeSection.querySelector('a[href="chat.html"]');
+            if (chatBtn) chatBtn.href = `chat.html?booking=${activeBooking.id}`;
+          } else {
+            activeSection.classList.add('hidden');
+          }
+          
+          // Render recent activity (up to 3 completed/cancelled)
+          const historyBookings = data.bookings.filter(b => b.status === 'completed' || b.status === 'cancelled').slice(0, 3);
+          
+          if (historyBookings.length > 0) {
+            recentActivity.classList.remove('hidden');
+            emptyActivity.classList.add('hidden');
+            recentActivity.innerHTML = historyBookings.map(item => `
+              <div class="history-card mb-md">
+                <div class="history-header">
+                  <span class="badge badge-${item.status}">${item.status}</span>
+                  <span class="history-date">${new Date(item.created_at).toLocaleDateString()}</span>
+                </div>
+                <div class="history-body">
+                  <div class="history-issue">${item.issue_description || item.service_name || 'Service Request'}</div>
+                  <div class="history-mechanic">🔧 ${item.mechanic_name || 'Pending'}</div>
+                </div>
+                <div class="history-footer">
+                  <span class="history-cost">${item.total_price ? '₹'+item.total_price : '—'}</span>
+                </div>
+              </div>
+            `).join('');
+          } else {
+            recentActivity.classList.add('hidden');
+            emptyActivity.classList.remove('hidden');
+          }
+        } else {
+          activeSection.classList.add('hidden');
+          recentActivity.classList.add('hidden');
+          emptyActivity.classList.remove('hidden');
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard:', err);
+      }
     }
   </script>
 </body>

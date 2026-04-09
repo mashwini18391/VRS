@@ -2,9 +2,8 @@
    VRS AI — OpenRouter API Integration + Safety Layer
    ═══════════════════════════════════════════════════ */
 
-// ── OpenRouter Configuration ──
-const OPENROUTER_API_KEY = 'your-openrouter-key'; // Replace with actual key
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+// ── AI Configuration ──
+const AI_ENDPOINT = '/api/ai/chat';
 
 let aiConversation = [];
 
@@ -167,50 +166,24 @@ function sanitizeAIResponse(text) {
 }
 
 /**
- * Call OpenRouter API
+ * Call AI Backend Proxy
  */
 async function callOpenRouter(message) {
-  if (OPENROUTER_API_KEY === 'your-openrouter-key') {
-    // Demo mode — use local responses
-    return new Promise(resolve => {
-      setTimeout(() => resolve(getLocalAIResponse(message)), 1200);
-    });
-  }
-
-  const systemPrompt = `You are VRS AI Assistant, an expert vehicle mechanic chatbot.
-RULES:
-- Help users diagnose vehicle issues and provide emergency advice.
-- NEVER create, confirm, or trigger bookings. Only suggest users navigate to the booking page manually.
-- NEVER provide definitive diagnoses. Always say "this could be" or "possible cause".
-- Keep responses concise, practical, and reassuring.
-- Do NOT return any executable code or JavaScript.
-- Do NOT provide pricing guarantees. Say "estimated" or "approximate" costs only.
-- If the issue seems dangerous, advise the user to stop driving immediately.
-- End responses with a note that this is an indicative suggestion only.`;
-
-  const response = await fetch(OPENROUTER_API_URL, {
+  const response = await fetch(AI_ENDPOINT, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'VRS Emergency Repair'
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.0-flash-001',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...aiConversation
-      ],
-      max_tokens: 500,
-      temperature: 0.7
+      message: message,
+      conversation: aiConversation.slice(0, -1) // Exclude the latest user message as backend adds it
     })
   });
 
   if (!response.ok) throw new Error('API request failed');
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || 'Sorry, I couldn\'t process that. Please try again.';
+  return data.response || "Sorry, I couldn't process that. Please try again.";
 }
 
 /**

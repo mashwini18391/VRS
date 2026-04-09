@@ -79,11 +79,12 @@
     <!-- Mechanics Panel -->
     <div class="section admin-panel" id="panelMechanics">
       <div class="flex justify-between items-center mb-md">
-        <h2 class="section-title" style="margin-bottom:0;">Mechanic Verification</h2>
+        <h2 class="section-title" style="margin-bottom:0;">Mechanic Management</h2>
         <div class="admin-filter-group">
           <button class="btn btn-sm btn-primary" onclick="filterMechanics('all')">All</button>
           <button class="btn btn-sm btn-outline" onclick="filterMechanics('pending')">Pending</button>
           <button class="btn btn-sm btn-outline" onclick="filterMechanics('verified')">Verified</button>
+          <button class="btn btn-sm btn-outline" onclick="showAddMechanicModal()" style="border-color: #22c55e; color: #22c55e; margin-left: 8px;">+ Add</button>
         </div>
       </div>
       <div id="mechanicsList" class="stagger-children">
@@ -113,6 +114,48 @@
       <div id="bookingsList" class="stagger-children">
         <!-- Populated by JS -->
       </div>
+    </div>
+  </div>
+
+  <!-- Add Mechanic Modal -->
+  <div id="addMechanicModal" class="modal-overlay hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px;">
+    <div class="card animate-scaleIn" style="width: 100%; max-width: 500px; padding: 24px;">
+      <div class="flex justify-between items-center mb-md">
+        <h2 style="margin:0;font-size:1.25rem;">Add New Mechanic</h2>
+        <button class="btn-icon btn-ghost" onclick="closeAddMechanicModal()">✖</button>
+      </div>
+      <form id="addMechanicForm" onsubmit="submitAddMechanic(event)">
+        <div class="input-group">
+          <label class="input-label">Name</label>
+          <input type="text" class="input" id="mechName" required placeholder="e.g. Ramesh Kumar">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Phone</label>
+          <input type="tel" class="input" id="mechPhone" required placeholder="+91-9876543210">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Specialization</label>
+          <input type="text" class="input" id="mechSpec" required placeholder="e.g. Engine Specialist">
+        </div>
+        <div style="display:flex;gap:16px;">
+          <div class="input-group" style="flex:1;">
+            <label class="input-label">Latitude</label>
+            <input type="number" step="0.00000001" class="input" id="mechLat" required value="18.52040000">
+          </div>
+          <div class="input-group" style="flex:1;">
+            <label class="input-label">Longitude</label>
+            <input type="number" step="0.00000001" class="input" id="mechLng" required value="73.85670000">
+          </div>
+        </div>
+        <div class="input-group" style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+          <input type="checkbox" id="mechVerified" checked>
+          <label for="mechVerified" style="font-size:0.9rem;">Auto-verify mechanic</label>
+        </div>
+        <div class="flex gap-sm mt-md">
+          <button type="button" class="btn btn-outline flex-1" onclick="closeAddMechanicModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary flex-1" id="addMechanicBtn">Save Mechanic</button>
+        </div>
+      </form>
     </div>
   </div>
 

@@ -1,13 +1,13 @@
-/* ═══════════════════════════════════════════════════
-   VRS API — Admin Dashboard Routes
-   ═══════════════════════════════════════════════════ */
+/* ===================================================
+   VRS API - Admin Dashboard Routes
+   =================================================== */
 
 const express = require('express');
 const router = express.Router();
 const { verifyAuth } = require('../middleware/auth');
 const { sanitizeInput, calculateTrustScore } = require('../middleware/validation');
 
-// ── In-memory data (fallback when MySQL not connected) ──
+// -- In-memory data (fallback when MySQL not connected) --
 let adminMechanics = [
   { id: 1, name: 'Rajesh Kumar', phone: '+91-9876543210', specialization: 'Engine Specialist', rating: 4.8, total_reviews: 156, completed_bookings: 180, verified: true, trust_score: 9.6, is_available: true },
   { id: 2, name: 'Priya Patel', phone: '+91-9876543211', specialization: 'Electrical & Battery', rating: 4.6, total_reviews: 89, completed_bookings: 102, verified: true, trust_score: 8.4, is_available: true },
@@ -83,6 +83,61 @@ router.get('/mechanics', (req, res) => {
   } catch (err) {
     console.error('Error fetching mechanics:', err);
     res.status(500).json({ error: 'Failed to fetch mechanics' });
+  }
+});
+
+/**
+ * POST /api/admin/mechanics — Add a new mechanic
+ */
+router.post('/mechanics', async (req, res) => {
+  try {
+    const { name, phone, specialization, latitude, longitude, verified } = req.body;
+    
+    if (!name || !phone || !latitude || !longitude) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const newMechanic = {
+      id: adminMechanics.length > 0 ? Math.max(...adminMechanics.map(m => m.id || 0)) + 1 : 1,
+      name,
+      phone,
+      specialization: specialization || 'General Mechanic',
+      rating: 0,
+      total_reviews: 0,
+      completed_bookings: 0,
+      verified: !!verified,
+      trust_score: !!verified ? 5.0 : 0.0,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      is_available: true
+    };
+
+    // Insert into in-memory array for Admin layout
+    adminMechanics.push(newMechanic);
+
+    // Also attempt to insert into actual database
+    try {
+      const db = require('../db');
+      await db.query(`INSERT INTO mechanics (name, phone, specialization, verified, latitude, longitude, trust_score) VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+        [newMechanic.name, newMechanic.phone, newMechanic.specialization, newMechanic.verified, newMechanic.latitude, newMechanic.longitude, newMechanic.trust_score]
+      );
+    } catch (dbErr) {
+      console.warn('Could not insert mechanic into MySQL (running in-memory only):', dbErr.message);
+    }
+
+    auditLog.push({
+      id: auditLog.length + 1,
+      admin_id: req.userId || 'admin',
+      action_type: 'approve_mechanic',
+      target_id: String(newMechanic.id),
+      reason: 'Mechanic created by admin',
+      created_at: new Date().toISOString()
+    });
+
+    res.status(201).json({ success: true, message: 'Mechanic added', mechanic: newMechanic });
+  } catch (err) {
+    console.error('Error adding mechanic:', err);
+    res.status(500).json({ error: 'Failed to add mechanic' });
   }
 });
 

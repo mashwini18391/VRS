@@ -7,10 +7,14 @@ let selectedIssue = null;
 let selectedMechanic = null;
 let isEmergency = false;
 
+// Global loaded data
+let availableMechanics = [];
+let availableServices = [];
+
 /**
  * Initialize booking page
  */
-function initBookingPage() {
+async function initBookingPage() {
   // Check if emergency mode
   isEmergency = getUrlParam('emergency') === 'true';
   if (isEmergency) {
@@ -18,27 +22,28 @@ function initBookingPage() {
     if (banner) banner.style.display = 'block';
   }
 
+  // Detect user location
+  detectLocation();
+
+  // Load services and mechanics
+  await loadAvailableServices();
+  await loadAvailableMechanics();
+
   // Check if a mechanic was pre-selected from map
   const mechanicId = getUrlParam('mechanic');
   if (mechanicId) {
-    // Only allow verified mechanics
-    const mechanic = DUMMY_MECHANICS.find(m => m.id === parseInt(mechanicId) && m.verified);
+    const mechanic = availableMechanics.find(m => m.id === parseInt(mechanicId));
     if (mechanic) {
-      selectedMechanic = mechanic;
+      // Must wait for DOM to be populated
+      setTimeout(() => chooseMechanic(mechanic.id), 100);
     } else {
-      showToast('Selected mechanic is not verified. Please choose a verified mechanic.', 'warning');
+      showToast('Selected mechanic is not verified or unavailable.', 'warning');
     }
   }
-
-  // Detect user location — GPS ONLY
-  detectLocation();
-
-  // Load available verified mechanics
-  loadAvailableMechanics();
 }
 
 /**
- * Detect user location for the booking — GPS ONLY, no manual input
+ * Detect user location
  */
 function detectLocation() {
   const locationEl = document.getElementById('userLocation');
@@ -71,7 +76,6 @@ function detectLocation() {
  * Select vehicle type
  */
 function selectVehicle(element) {
-  // Remove previous selection
   document.querySelectorAll('.vehicle-option').forEach(opt => opt.classList.remove('selected'));
   element.classList.add('selected');
   selectedVehicle = element.dataset.vehicle;
@@ -82,7 +86,6 @@ function selectVehicle(element) {
  * Select issue type
  */
 function selectIssue(element) {
-  // Remove previous selection
   document.querySelectorAll('.issue-option').forEach(opt => opt.classList.remove('selected'));
   element.classList.add('selected');
   selectedIssue = element.dataset.issue;
@@ -91,37 +94,52 @@ function selectIssue(element) {
 }
 
 /**
- * Load available mechanics — ONLY VERIFIED mechanics shown
+ * Load available services
  */
-function loadAvailableMechanics() {
+async function loadAvailableServices() {
+  try {
+    const res = await fetch('/api/services');
+    const data = await res.json();
+    if (data.success) {
+      availableServices = data.services;
+    }
+  } catch (err) {
+    console.error('Failed to load services:', err);
+  }
+}
+
+/**
+ * Load available mechanics
+ */
+async function loadAvailableMechanics() {
   const container = document.getElementById('availableMechanics');
   if (!container) return;
 
   const userLat = 18.5204;
   const userLng = 73.8567;
 
-  // Only show verified + available mechanics
-  const mechanics = DUMMY_MECHANICS
-    .filter(m => m.is_available && m.verified)
-    .map(m => ({
-      ...m,
-      distance: haversineDistance(userLat, userLng, m.latitude, m.longitude),
-      eta: estimateETA(haversineDistance(userLat, userLng, m.latitude, m.longitude))
-    }))
-    .sort((a, b) => a.distance - b.distance);
+  try {
+    const res = await fetch(`/api/mechanics/nearby?lat=${userLat}&lng=${userLng}`);
+    const data = await res.json();
+    if (data.success) {
+      availableMechanics = data.mechanics;
+    }
+  } catch (err) {
+    console.error('Failed to load mechanics', err);
+  }
 
-  container.innerHTML = mechanics.map(m => `
+  container.innerHTML = availableMechanics.map(m => `
     <div class="mechanic-card mb-md ${selectedMechanic?.id === m.id ? 'selected' : ''}"
          onclick="chooseMechanic(${m.id})"
          id="mechanic-card-${m.id}"
          style="${selectedMechanic?.id === m.id ? 'border-color:var(--emergency-blue);background:var(--emergency-blue-soft);' : ''}">
-      <div class="mechanic-avatar">${m.name.charAt(0)}</div>
+      <div class="mechanic-avatar">${m.avatar_url ? `<img src="${m.avatar_url}" style="width:100%;border-radius:50%;">` : m.name.charAt(0)}</div>
       <div class="mechanic-info">
         <div class="mechanic-name">
           ${m.name}
           <span class="verified-badge">✅ Verified</span>
         </div>
-        <div class="mechanic-specialty">${m.specialization}</div>
+        <div class="mechanic-specialty">${m.specialization} &bull; 📞 ${m.phone || 'N/A'}</div>
         <div class="mechanic-meta">
           <span class="mechanic-rating">⭐ ${m.rating} (${m.total_reviews})</span>
           <span class="mechanic-distance">📍 ${formatDistance(m.distance)}</span>
@@ -140,17 +158,12 @@ function loadAvailableMechanics() {
 }
 
 /**
- * Choose a mechanic — only verified mechanics allowed
+ * Choose a mechanic 
  */
 function chooseMechanic(mechanicId) {
-  const mechanic = DUMMY_MECHANICS.find(m => m.id === mechanicId);
+  const mechanic = availableMechanics.find(m => m.id === mechanicId);
 
   if (!mechanic) return;
-
-  if (!mechanic.verified) {
-    showToast('Cannot select unverified mechanic. Only verified mechanics are available.', 'warning');
-    return;
-  }
 
   selectedMechanic = mechanic;
 
@@ -171,8 +184,7 @@ function chooseMechanic(mechanicId) {
 }
 
 /**
- * Update price based on selections — FIXED PRICING from services table
- * Mechanics CANNOT modify prices dynamically
+ * Update price based on selections
  */
 function updatePrice() {
   const pricingSection = document.getElementById('pricingSection');
@@ -181,7 +193,6 @@ function updatePrice() {
   if (selectedIssue && selectedMechanic) {
     pricingSection.style.display = 'block';
 
-    // Find matching service from FIXED pricing table
     const issueServiceMap = {
       'flat-tire': 'tire',
       'battery': 'battery',
@@ -192,10 +203,9 @@ function updatePrice() {
     };
 
     const category = issueServiceMap[selectedIssue] || 'other';
-    const service = DUMMY_SERVICES.find(s => s.category === category);
+    const service = availableServices.find(s => s.category === category);
 
-    // Fixed pricing — no dynamic modification allowed
-    const serviceCharge = service ? service.base_price : 1000;
+    const serviceCharge = service ? parseFloat(service.base_price) : 1000;
     const visitFee = 200;
     const gst = Math.round((serviceCharge + visitFee) * 0.18);
     const total = serviceCharge + visitFee + gst;
@@ -203,7 +213,6 @@ function updatePrice() {
     document.getElementById('serviceCharge').textContent = formatCurrency(serviceCharge);
     document.getElementById('visitFee').textContent = formatCurrency(visitFee);
 
-    // Show GST if element exists
     const gstEl = document.getElementById('gstAmount');
     if (gstEl) gstEl.textContent = formatCurrency(gst);
 
@@ -212,7 +221,6 @@ function updatePrice() {
 
     document.getElementById('totalPrice').textContent = formatCurrency(total);
 
-    // Show fixed pricing notice
     const priceNotice = document.getElementById('priceNotice');
     if (priceNotice) {
       priceNotice.style.display = 'block';
@@ -231,39 +239,73 @@ function validateBooking() {
 }
 
 /**
- * Confirm booking
+ * Confirm booking using backend API
  */
-function confirmBooking() {
+async function confirmBooking() {
   if (!selectedIssue || !selectedMechanic) {
     showToast('Please select an issue and mechanic', 'warning');
     return;
   }
 
-  if (!selectedMechanic.verified) {
-    showToast('Cannot book an unverified mechanic', 'error');
-    return;
+  const description = document.getElementById('issueDesc')?.value || '';
+  
+  const issueServiceMap = {
+    'flat-tire': 'tire',
+    'battery': 'battery',
+    'engine': 'engine',
+    'brake': 'brake',
+    'fuel': 'fuel',
+    'other': 'other'
+  };
+  const category = issueServiceMap[selectedIssue] || 'other';
+  const service = availableServices.find(s => s.category === category);
+
+  const btn = document.getElementById('confirmBookingBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner spinner-sm"></span> Processing...';
   }
 
-  const description = document.getElementById('issueDesc')?.value || '';
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('vrs_token') // Optional auth
+      },
+      body: JSON.stringify({
+        vehicle_type: selectedVehicle,
+        issue_type: selectedIssue,
+        issue_description: description,
+        mechanic_id: selectedMechanic.id,
+        service_id: service ? service.id : null,
+        latitude: 18.5204, // Default or use GPS if tracked
+        longitude: 73.8567,
+        is_emergency: isEmergency
+      })
+    });
 
-  const booking = {
-    id: 'BK' + generateId().toUpperCase(),
-    vehicle: selectedVehicle,
-    issue: selectedIssue,
-    description: description,
-    mechanic: selectedMechanic,
-    isEmergency: isEmergency,
-    timestamp: new Date().toISOString(),
-    status: 'pending'
-  };
+    const data = await res.json();
 
-  // Store booking
-  localStorage.setItem('vrs_active_booking', JSON.stringify(booking));
-
-  showToast(`Booking confirmed! ${selectedMechanic.name} (Verified ✅) is on the way.`, 'success');
-
-  // Redirect to chat
-  setTimeout(() => {
-    window.location.href = 'chat.html';
-  }, 1500);
+    if (res.ok && data.success) {
+      showToast(`Booking confirmed! ${selectedMechanic.name} (Verified ✅) is on the way.`, 'success');
+      
+      // Store active booking ID for reference
+      localStorage.setItem('vrs_active_booking_id', data.booking.id);
+      
+      // Redirect to chat
+      setTimeout(() => {
+        window.location.href = `chat.html?booking=${data.booking.id}`;
+      }, 1500);
+    } else {
+      throw new Error(data.error || 'Failed to book');
+    }
+  } catch (err) {
+    console.error('Booking error:', err);
+    showToast('Failed to create booking. Please try again.', 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = 'Confirm Booking';
+    }
+  }
 }

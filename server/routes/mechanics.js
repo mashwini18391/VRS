@@ -1,20 +1,22 @@
-/* ═══════════════════════════════════════════════════
-   VRS API — Mechanics Routes
+/* ===================================================
+   VRS API - Mechanics Routes
    Trust & Verification System
-   ═══════════════════════════════════════════════════ */
+   =================================================== */
 
 const express = require('express');
 const router = express.Router();
 const { calculateTrustScore } = require('../middleware/validation');
 
-// Mechanics data with verification fields (fallback when MySQL not connected)
-const MECHANICS = [
-  { id: 1, name: 'Rajesh Kumar', phone: '+91-9876543210', specialization: 'Engine Specialist', rating: 4.8, total_reviews: 156, completed_bookings: 180, verified: true, trust_score: 9.6, latitude: 18.5204, longitude: 73.8567, is_available: true, avatar_url: null },
-  { id: 2, name: 'Priya Patel', phone: '+91-9876543211', specialization: 'Electrical & Battery', rating: 4.6, total_reviews: 89, completed_bookings: 102, verified: true, trust_score: 8.4, latitude: 18.5280, longitude: 73.8650, is_available: true, avatar_url: null },
-  { id: 3, name: 'Ajay Singh', phone: '+91-9876543212', specialization: 'Tire & Suspension', rating: 4.9, total_reviews: 234, completed_bookings: 260, verified: true, trust_score: 10.0, latitude: 18.5150, longitude: 73.8480, is_available: true, avatar_url: null },
-  { id: 4, name: 'Sneha Deshmukh', phone: '+91-9876543213', specialization: 'General Mechanic', rating: 4.5, total_reviews: 67, completed_bookings: 75, verified: false, trust_score: 5.2, latitude: 18.5320, longitude: 73.8720, is_available: false, avatar_url: null },
-  { id: 5, name: 'Rahul Mehta', phone: '+91-9876543214', specialization: 'AC & Cooling', rating: 4.7, total_reviews: 112, completed_bookings: 130, verified: true, trust_score: 9.0, latitude: 18.5100, longitude: 73.8600, is_available: true, avatar_url: null },
-  { id: 6, name: 'Amit Verma', phone: '+91-9876543215', specialization: 'Brake Specialist', rating: 4.4, total_reviews: 45, completed_bookings: 50, verified: false, trust_score: 4.5, latitude: 18.5350, longitude: 73.8500, is_available: true, avatar_url: null },
+const db = require('../db');
+
+// Fallback data when DB is missing
+const mockMechanics = [
+  { id: 1, name: 'Rajesh Kumar', phone: '+91-9876543210', specialization: 'Engine Specialist', rating: 4.8, total_reviews: 156, completed_bookings: 180, verified: true, trust_score: 9.6, is_available: true, latitude: 18.52040000, longitude: 73.85670000 },
+  { id: 2, name: 'Priya Patel', phone: '+91-9876543211', specialization: 'Electrical & Battery', rating: 4.6, total_reviews: 89, completed_bookings: 102, verified: true, trust_score: 8.4, is_available: true, latitude: 18.52800000, longitude: 73.86500000 },
+  { id: 3, name: 'Ajay Singh', phone: '+91-9876543212', specialization: 'Tire & Suspension', rating: 4.9, total_reviews: 234, completed_bookings: 260, verified: true, trust_score: 10.0, is_available: true, latitude: 18.51500000, longitude: 73.84800000 },
+  { id: 4, name: 'Sneha Deshmukh', phone: '+91-9876543213', specialization: 'General Mechanic', rating: 4.5, total_reviews: 67, completed_bookings: 75, verified: false, trust_score: 5.2, is_available: false, latitude: 18.53200000, longitude: 73.87200000 },
+  { id: 5, name: 'Rahul Mehta', phone: '+91-9876543214', specialization: 'AC & Cooling', rating: 4.7, total_reviews: 112, completed_bookings: 130, verified: true, trust_score: 9.0, is_available: true, latitude: 18.51000000, longitude: 73.86000000 },
+  { id: 6, name: 'Amit Verma', phone: '+91-9876543215', specialization: 'Brake Specialist', rating: 4.4, total_reviews: 45, completed_bookings: 50, verified: false, trust_score: 4.5, is_available: true, latitude: 18.53500000, longitude: 73.85000000 }
 ];
 
 /**
@@ -30,17 +32,15 @@ router.get('/nearby', async (req, res) => {
     const maxRadius = parseFloat(radius);
     const showUnverified = includeUnverified === 'true';
 
-    // Try MySQL first, fallback to dummy data
-    let mechanics = MECHANICS;
-
+    let mechanics = [];
     try {
-      const db = require('../db');
       const query = showUnverified
         ? 'SELECT * FROM mechanics WHERE is_available = TRUE'
         : 'SELECT * FROM mechanics WHERE is_available = TRUE AND verified = TRUE';
       mechanics = await db.query(query);
-    } catch {
-      // MySQL not available, use dummy data
+    } catch (dbErr) {
+      console.warn('DB error, using fallback mechanics:', dbErr.message);
+      mechanics = mockMechanics;
     }
 
     // Filter: only available + verified (unless includeUnverified)
@@ -62,7 +62,7 @@ router.get('/nearby', async (req, res) => {
     res.json({ success: true, count: results.length, mechanics: results });
   } catch (err) {
     console.error('Error fetching mechanics:', err);
-    res.status(500).json({ error: 'Failed to fetch nearby mechanics' });
+    res.status(500).json({ error: 'Failed to fetch nearby mechanics', details: err.message, stack: err.stack });
   }
 });
 
@@ -72,11 +72,20 @@ router.get('/nearby', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    let mechanic = MECHANICS.find(m => m.id === id);
+    let results = [];
+    try {
+      results = await db.query('SELECT * FROM mechanics WHERE id = ?', [id]);
+    } catch (dbErr) {
+      console.warn('DB error, using fallback mechanic:', dbErr.message);
+      const m = mockMechanics.find(m => m.id === id);
+      if (m) results = [m];
+    }
 
-    if (!mechanic) {
+    if (results.length === 0) {
       return res.status(404).json({ error: 'Mechanic not found' });
     }
+
+    let mechanic = results[0];
 
     // Calculate trust score if missing
     if (!mechanic.trust_score) {

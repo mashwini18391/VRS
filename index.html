@@ -79,10 +79,13 @@
   <script src="js/app.js"></script>
   <script>
     // Handle OAuth redirect callback + check if already logged in
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      let redirecting = false;
+
       // Listen for auth state changes (handles Google OAuth redirect)
       onAuthStateChange((event, user) => {
-        if (event === 'SIGNED_IN' && user) {
+        if (event === 'SIGNED_IN' && user && !redirecting) {
+          redirecting = true;
           showToast(`Welcome, ${user.user_metadata?.full_name || user.email}!`, 'success');
           setTimeout(() => {
             window.location.href = 'dashboard.html';
@@ -90,8 +93,11 @@
         }
       });
 
-      // Check if already logged in
-      checkAuthAndRedirect();
+      // Regular check for already logged in users
+      const user = await getCurrentUser();
+      if (user && !redirecting) {
+        window.location.href = 'dashboard.html';
+      }
     });
   </script>
 </body>

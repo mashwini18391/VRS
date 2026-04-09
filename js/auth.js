@@ -1,11 +1,11 @@
-/* ═══════════════════════════════════════════════════
-   VRS Authentication — Supabase + Google OAuth
+/* ===================================================
+   VRS Authentication - Supabase + Google OAuth
    Real Gmail Login
-   ═══════════════════════════════════════════════════ */
+   =================================================== */
 
-// ── Supabase Configuration ──
-const SUPABASE_URL = 'https://ndfxxquonftqocjjymnr.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kZnh4cXVvbmZ0cW9jamp5bW5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDkwNTEsImV4cCI6MjA4OTU4NTA1MX0.9xUjS6zU3qWNqeytijfUknacaTV3rX7HEo0xw33xB7U';
+// -- Supabase Configuration --
+const SUPABASE_URL = 'https://pgikamweatijdrmdxkue.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnaWthbXdlYXRpamRybWR4a3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NDE1MDAsImV4cCI6MjA5MTExNzUwMH0.EgQbo-TN7KZry6VuovFg4B9z0r1b-DJTeLBCd_T3ZE8';
 
 let supabaseClient = null;
 
@@ -82,26 +82,36 @@ async function handleSignOut() {
 }
 
 /**
- * Get current user from Supabase session
+ * Get current user from Supabase session (more reliable)
  */
 async function getCurrentUser() {
   const client = initSupabase();
-
   if (!client) return null;
 
   try {
-    const { data: { session } } = await client.auth.getSession();
+    // 1. Try to get the active session (checks localStorage/cookies)
+    const { data: { session }, error } = await client.auth.getSession();
+    
+    if (error) {
+      console.warn('Auth session error:', error.message);
+    }
 
     if (session && session.user) {
-      // Cache user info in localStorage for quick access
+      // Sync local storage flags
       localStorage.setItem('vrs_user', JSON.stringify(session.user));
       localStorage.setItem('vrs_auth', 'true');
+      localStorage.setItem('user_id', session.user.id);
       return session.user;
     }
 
-    // No active session — clear cached data
-    localStorage.removeItem('vrs_user');
-    localStorage.removeItem('vrs_auth');
+    // 2. Fallback: If no session, wait briefly (Supabase SDK sometimes needs a beat to restore storage)
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const { data: { session: secondTry } } = await client.auth.getSession();
+    
+    if (secondTry && secondTry.user) {
+      return secondTry.user;
+    }
+
     return null;
   } catch (err) {
     console.error('Get user error:', err);
@@ -156,16 +166,20 @@ function onAuthStateChange(callback) {
   if (!client) return;
 
   client.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session?.user) {
-      localStorage.setItem('vrs_user', JSON.stringify(session.user));
+    const user = session?.user || null;
+
+    if (event === 'SIGNED_IN' && user) {
+      localStorage.setItem('vrs_user', JSON.stringify(user));
       localStorage.setItem('vrs_auth', 'true');
+      localStorage.setItem('user_id', user.id);
     } else if (event === 'SIGNED_OUT') {
       localStorage.removeItem('vrs_user');
       localStorage.removeItem('vrs_auth');
+      localStorage.removeItem('user_id');
     }
 
     if (callback) {
-      callback(event, session?.user || null);
+      callback(event, user);
     }
   });
 }
