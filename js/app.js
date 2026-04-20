@@ -2,6 +2,7 @@
    VRS App — Entry Point & Global Init
    ═══════════════════════════════════════════════════ */
 
+<<<<<<< HEAD
 // Initialize global theme from storage
 if (localStorage.getItem('theme') === 'light') {
   document.body.classList.add('light-theme');
@@ -17,6 +18,8 @@ const dummyBookings = [
   { id: 'BKG-06', mechanic: 'Super Repair', issue: 'Suspension Check', date: 'Oct 29, 2026', amount: '₹5500', status: 'cancelled' }
 ];
 
+=======
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
 /**
  * Initialize the app
  */

@@ -98,28 +98,46 @@
           </div>
           <div class="toggle active" onclick="this.classList.toggle('active')"></div>
         </div>
+<<<<<<< HEAD
         <div class="settings-item" style="cursor: pointer;">
+=======
+        <div class="settings-item">
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
           <div class="settings-left">
             <div class="settings-icon">🌙</div>
             <span class="settings-label">Dark Mode</span>
           </div>
+<<<<<<< HEAD
           <div class="toggle active" id="themeToggle"></div>
         </div>
         <div class="settings-item" onclick="openPrivacy()" style="cursor: pointer;">
+=======
+          <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+        </div>
+        <div class="settings-item">
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
           <div class="settings-left">
             <div class="settings-icon">🔒</div>
             <span class="settings-label">Privacy</span>
           </div>
           <span class="settings-arrow">→</span>
         </div>
+<<<<<<< HEAD
         <div class="settings-item" onclick="openHelp()" style="cursor: pointer;">
+=======
+        <div class="settings-item">
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
           <div class="settings-left">
             <div class="settings-icon">❓</div>
             <span class="settings-label">Help & Support</span>
           </div>
           <span class="settings-arrow">→</span>
         </div>
+<<<<<<< HEAD
         <div class="settings-item" onclick="openAbout()" style="cursor: pointer;">
+=======
+        <div class="settings-item">
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
           <div class="settings-left">
             <div class="settings-icon">ℹ️</div>
             <span class="settings-label">About VRS</span>
@@ -150,6 +168,7 @@
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
   <script>
+<<<<<<< HEAD
     document.addEventListener('DOMContentLoaded', () => {
       // 1. DUMMY DATA FOR USER
       document.getElementById('profileName').textContent = 'Arjun Kumar';
@@ -241,6 +260,19 @@
         <p style="margin-top:var(--space-sm);">Made with passion for safety and reliability.</p>
       `);
     }
+=======
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await requireAuth();
+      if (user) {
+        document.getElementById('profileName').textContent = user.user_metadata?.full_name || 'User';
+        document.getElementById('profileEmail').textContent = user.email || '';
+        const avatar = user.user_metadata?.avatar_url;
+        if (avatar) {
+          document.getElementById('profileAvatar').src = avatar;
+        }
+      }
+    });
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
   </script>
 </body>
 </html>

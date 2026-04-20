@@ -90,6 +90,7 @@
   --z-fab: 500;
   --z-toast: 600;
 }
+<<<<<<< HEAD
 
 /* ── Light Theme Overrides ── */
 body.light-theme {
@@ -108,3 +109,5 @@ body.light-theme {
   --border-default: rgba(0, 0, 0, 0.1);
   --border-strong: rgba(0, 0, 0, 0.18);
 }
+=======
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9

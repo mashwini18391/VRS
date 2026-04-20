@@ -4,7 +4,10 @@
 
 let currentFilter = 'all';
 let currentHistory = [];
+<<<<<<< HEAD
 let hasFetchedHistory = false;
+=======
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
 
 /**
  * Load repair history
@@ -15,6 +18,7 @@ async function loadHistory(filter = 'all') {
   const emptyState = document.getElementById('emptyHistory');
   if (!container) return;
 
+<<<<<<< HEAD
   if (!hasFetchedHistory) {
     try {
       const userId = localStorage.getItem('user_id') || 'demo-user-123';
@@ -64,14 +68,44 @@ async function loadHistory(filter = 'all') {
     }));
     
     hasFetchedHistory = true;
+=======
+  try {
+    const userId = localStorage.getItem('user_id') || 'demo-user-123';
+    const res = await fetch(`/api/bookings/user/${userId}`);
+    const data = await res.json();
+    
+    if (data.success) {
+      currentHistory = data.bookings.map(b => ({
+        id: b.id,
+        status: b.status,
+        date: b.created_at,
+        issue: b.issue_description || b.service_name || 'General Repair',
+        mechanic: b.mechanic_name || 'Unknown Mechanic',
+        vehicle: b.vehicle_type || 'car',
+        cost: parseFloat(b.total_price) || 0,
+        rating: null,
+        review: null
+      }));
+    } else {
+      currentHistory = [];
+    }
+  } catch (err) {
+    console.error('Failed to fetch history:', err);
+    currentHistory = [];
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
   }
 
   // Apply filter
   let displayHistory = currentHistory;
+<<<<<<< HEAD
   const normalizedFilter = String(filter).toLowerCase().trim();
   
   if (normalizedFilter !== 'all') {
     displayHistory = currentHistory.filter(h => h.status === normalizedFilter);
+=======
+  if (filter !== 'all') {
+    displayHistory = displayHistory.filter(h => h.status === filter);
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
   }
 
   if (displayHistory.length === 0) {

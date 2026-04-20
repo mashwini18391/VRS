@@ -122,6 +122,7 @@ async function loadNearbyMechanics() {
     const res = await fetch(`/api/mechanics/nearby?lat=${userLat}&lng=${userLng}`);
     const data = await res.json();
 
+<<<<<<< HEAD
     if (data.success && data.mechanics && data.mechanics.length > 0) {
       mechanicsWithDistance = data.mechanics;
       filteredMechanics = [...mechanicsWithDistance];
@@ -146,6 +147,19 @@ async function loadNearbyMechanics() {
       };
     }).sort((a, b) => a.distance - b.distance);
     filteredMechanics = [...mechanicsWithDistance];
+=======
+    if (data.success) {
+      mechanicsWithDistance = data.mechanics;
+      filteredMechanics = [...mechanicsWithDistance];
+    } else {
+      mechanicsWithDistance = [];
+      filteredMechanics = [];
+    }
+  } catch (err) {
+    console.error('Failed to load mechanics:', err);
+    mechanicsWithDistance = [];
+    filteredMechanics = [];
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
   }
 
   renderMechanicsOnMap();

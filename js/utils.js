@@ -326,6 +326,7 @@ const DUMMY_HISTORY = [
   },
   {
     id: 'BK002',
+<<<<<<< HEAD
     date: '2026-04-10T14:15:00',
     issue: 'Battery Replacement',
     mechanic: 'Priya Patel',
@@ -335,6 +336,17 @@ const DUMMY_HISTORY = [
     status: 'pending',
     rating: null,
     review: null
+=======
+    date: '2026-03-15T14:15:00',
+    issue: 'Battery Jump Start',
+    mechanic: 'Priya Patel',
+    mechanic_verified: true,
+    vehicle: 'Hyundai i20',
+    cost: 800,
+    status: 'completed',
+    rating: 4,
+    review: 'Quick response, got my car running again.'
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
   },
   {
     id: 'BK003',
@@ -350,15 +362,25 @@ const DUMMY_HISTORY = [
   },
   {
     id: 'BK004',
+<<<<<<< HEAD
     date: '2026-04-08T16:45:00',
+=======
+    date: '2026-03-05T16:45:00',
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
     issue: 'AC Not Cooling',
     mechanic: 'Rahul Mehta',
     mechanic_verified: true,
     vehicle: 'Hyundai i20',
     cost: 2200,
+<<<<<<< HEAD
     status: 'pending',
     rating: null,
     review: null
+=======
+    status: 'completed',
+    rating: 4,
+    review: 'Good service, AC working like new.'
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
   },
   {
     id: 'BK005',
@@ -371,6 +393,7 @@ const DUMMY_HISTORY = [
     status: 'cancelled',
     rating: null,
     review: null
+<<<<<<< HEAD
   },
   {
     id: 'BK006',
@@ -383,5 +406,7 @@ const DUMMY_HISTORY = [
     status: 'cancelled',
     rating: null,
     review: null
+=======
+>>>>>>> 792c9bf5557c932829c314716be1f2369dc0acf9
   }
 ];
