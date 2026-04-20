@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Select Role — VRS</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+    }
+    .role-container {
+      width: 100%;
+      max-width: 400px;
+      padding: var(--space-xl);
+    }
+    .role-header {
+      text-align: center;
+      margin-bottom: var(--space-xl);
+    }
+    .role-logo {
+      font-size: 3rem;
+      margin-bottom: var(--space-md);
+      display: inline-block;
+      animation: float 3s ease-in-out infinite;
+    }
+    .role-title {
+      font-size: var(--fs-2xl);
+      font-weight: 800;
+      margin-bottom: var(--space-xs);
+    }
+    .role-subtitle {
+      color: var(--text-secondary);
+      font-size: var(--fs-base);
+    }
+    .role-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-md);
+      cursor: pointer;
+      transition: all var(--transition-base);
+      text-decoration: none;
+      color: inherit;
+    }
+    .role-btn:hover {
+      border-color: var(--emergency-blue);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      background: var(--bg-elevated);
+    }
+    .role-btn-icon {
+      font-size: 2rem;
+      background: var(--bg-primary);
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+    }
+    .role-btn-content {
+      flex: 1;
+    }
+    .role-btn-title {
+      font-weight: 600;
+      font-size: var(--fs-lg);
+      margin-bottom: 2px;
+    }
+    .role-btn-desc {
+      font-size: var(--fs-sm);
+      color: var(--text-tertiary);
+    }
+  </style>
+</head>
+<body>
+  <div class="role-container animate-slideDown">
+    <div class="role-header">
+      <div class="role-logo">⚡</div>
+      <h1 class="role-title">Welcome to VRS</h1>
+      <p class="role-subtitle">How would you like to continue?</p>
+    </div>
+
+    <!-- Car Owner -->
+    <a href="index.html" class="role-btn">
+      <div class="role-btn-icon">🚗</div>
+      <div class="role-btn-content">
+        <div class="role-btn-title">Car Owner</div>
+        <div class="role-btn-desc">Find mechanics & book repairs</div>
+      </div>
+      <div style="color:var(--text-tertiary); font-size: 1.5rem;">→</div>
+    </a>
+
+    <!-- Garage Owner -->
+    <a href="server/garage.html" class="role-btn">
+      <div class="role-btn-icon">🔧</div>
+      <div class="role-btn-content">
+        <div class="role-btn-title">Garage Owner</div>
+        <div class="role-btn-desc">Manage repair requests</div>
+      </div>
+      <div style="color:var(--text-tertiary); font-size: 1.5rem;">→</div>
+    </a>
+
+  </div>
+</body>
+</html>

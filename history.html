@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="View your repair history.">
+  <meta name="theme-color" content="#06060b">
+  <title>Repair History — VRS</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Desktop Nav -->
+  <nav class="desktop-nav">
+    <div class="desktop-nav-logo">⚡ VRS</div>
+    <div class="desktop-nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="map.html">Map</a>
+      <a href="history.html" class="active">History</a>
+      <a href="ai-diagnosis.html">AI Assist</a>
+      <a href="profile.html">Profile</a>
+    </div>
+  </nav>
+
+  <div class="page-container animate-fadeIn">
+    <!-- Header -->
+    <div class="page-header">
+      <h1 class="page-title">Repair History</h1>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="flex gap-sm mb-lg" style="overflow-x:auto; padding-bottom: 5px;">
+      <button class="btn btn-sm btn-primary" onclick="filterHistory('all', this)" data-filter="all">All</button>
+      <button class="btn btn-sm btn-outline" onclick="filterHistory('pending', this)" data-filter="pending">Pending</button>
+      <button class="btn btn-sm btn-outline" onclick="filterHistory('completed', this)" data-filter="completed">Completed</button>
+      <button class="btn btn-sm btn-outline" onclick="filterHistory('cancelled', this)" data-filter="cancelled">Cancelled</button>
+    </div>
+
+    <!-- History Cards Container -->
+    <div id="historyList" class="stagger-children" style="padding-bottom: 24px;">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-item"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></a>
+    <a href="map.html" class="nav-item"><span class="nav-icon">🗺️</span><span class="nav-label">Map</span></a>
+    <a href="ai-diagnosis.html" class="nav-item"><span class="nav-icon">🤖</span><span class="nav-label">AI</span></a>
+    <a href="history.html" class="nav-item active"><span class="nav-icon">📋</span><span class="nav-label">History</span></a>
+    <a href="profile.html" class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></a>
+  </nav>
+
+  <script src="js/app.js"></script>
+  <script>
+
+    /**
+     * Renders filter-specific list natively in the DOM.
+     * Maps styling dynamically so the UX flows smoothly.
+     */
+    function renderBookings(filter) {
+      const list = document.getElementById('historyList');
+      list.innerHTML = '';
+      
+      const filtered = dummyBookings.filter(b => filter === 'all' || b.status === filter);
+      
+      if (filtered.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state animate-slideUp">
+            <div class="empty-state-icon">📋</div>
+            <div class="empty-state-title">No Repairs Found</div>
+            <p class="empty-state-text" style="text-transform: capitalize;">You have no ${filter} repairs to show right now.</p>
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(b => {
+        let statusBadge = '';
+        if (b.status === 'completed') statusBadge = '<span class="badge" style="background:var(--success-soft);color:var(--success)">Completed</span>';
+        if (b.status === 'pending') statusBadge = '<span class="badge" style="background:var(--warning-soft);color:var(--warning)">Pending</span>';
+        if (b.status === 'cancelled') statusBadge = '<span class="badge" style="background:var(--emergency-red-soft);color:var(--emergency-red)">Cancelled</span>';
+
+        list.innerHTML += `
+          <div class="card animate-slideUp" style="padding:var(--space-md); margin-bottom:var(--space-md);">
+            <div class="flex justify-between items-center" style="margin-bottom:var(--space-sm);">
+              <strong style="color:var(--text-primary); font-size:var(--fs-md);">${b.mechanic}</strong>
+              ${statusBadge}
+            </div>
+            <div style="font-size:var(--fs-sm); color:var(--text-secondary); line-height:1.6;">
+              <div style="margin-bottom:4px;">🧑‍🔧 <strong style="color:var(--text-primary);">Issue:</strong> ${b.issue}</div>
+              <div style="margin-bottom:4px;">📅 <strong style="color:var(--text-primary);">Date:</strong> ${b.date}</div>
+              <div style="margin-top:8px; font-weight:bold; color:var(--text-primary); font-size:var(--fs-base);">💰 Total: ${b.amount}</div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    /**
+     * Toggles visually active states & executes render loop.
+     */
+    function filterHistory(type, btnElement) {
+      document.querySelectorAll('[data-filter]').forEach(btn => {
+        btn.className = 'btn btn-sm btn-outline';
+      });
+      btnElement.className = 'btn btn-sm btn-primary';
+      renderBookings(type);
+    }
+
+    // Initialize list when dom is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      renderBookings('all');
+    });
+  </script>
+</body>
+</html>
