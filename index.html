@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="VRS — Emergency vehicle repair assistance. Find nearby mechanics, request service, and track repairs in real-time.">
+  <meta name="theme-color" content="#0a0a12">
+  <title>VRS — Emergency Vehicle Repair</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a12;
+      --bg-card: #12121e;
+      --bg-card-hover: #1a1a2e;
+      --text: #e8e8ef;
+      --text-muted: #8888a0;
+      --text-dim: #55556a;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.12);
+      --accent-glow: rgba(59, 130, 246, 0.25);
+      --green: #22c55e;
+      --green-soft: rgba(34, 197, 94, 0.12);
+      --orange: #f59e0b;
+      --orange-soft: rgba(245, 158, 11, 0.12);
+      --rose: #f43f5e;
+      --rose-soft: rgba(244, 63, 94, 0.12);
+      --purple: #a855f7;
+      --purple-soft: rgba(168, 85, 247, 0.12);
+      --border: rgba(255,255,255,0.06);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --font: 'Inter', -apple-system, system-ui, sans-serif;
+      --max-w: 1080px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Shared Layout ── */
+    .container {
+      width: 100%;
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    section {
+      padding: 80px 0;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+
+    .section-desc {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .section-header .section-desc {
+      margin: 0 auto;
+    }
+
+    /* ── Sticky Nav ── */
+    .topnav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(10, 10, 18, 0.8);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      transition: box-shadow 0.3s;
+    }
+
+    .topnav-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+
+    .topnav-logo {
+      font-weight: 800;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .topnav-logo span {
+      font-size: 1.4rem;
+    }
+
+    .topnav-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .topnav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .topnav-links a:hover { color: var(--text); }
+
+    .topnav-cta {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      text-decoration: none;
+    }
+
+    .topnav-cta:hover { opacity: 0.85; }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding-top: 80px;
+      padding-bottom: 40px;
+    }
+
+    .hero-inner {
+      text-align: center;
+      width: 100%;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 6px 16px;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 28px;
+      border: 1px solid rgba(59, 130, 246, 0.15);
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      letter-spacing: -1px;
+    }
+
+    .hero h1 .gradient-text {
+      background: linear-gradient(135deg, var(--accent), #818cf8, var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      color: var(--text-muted);
+      max-width: 520px;
+      margin: 0 auto 44px;
+      line-height: 1.7;
+    }
+
+    /* ── Role Selector Cards ── */
+    .role-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 520px;
+      margin: 0 auto 40px;
+    }
+
+    .role-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 12px;
+    }
+
+    .role-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 30px rgba(59, 130, 246, 0.1);
+      background: var(--bg-card-hover);
+    }
+
+    .role-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+    }
+
+    .role-card:first-child .role-icon {
+      background: var(--accent-soft);
+    }
+
+    .role-card:last-child .role-icon {
+      background: var(--orange-soft);
+    }
+
+    .role-name {
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .role-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ── Google CTA ── */
+    .hero-google-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      color: #333;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      font-family: var(--font);
+      width: 100%;
+      justify-content: center;
+    }
+
+    .hero-google-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255,255,255,0.08);
+    }
+
+    .hero-google-btn svg { width: 20px; height: 20px; }
+
+    .hero-or {
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      margin: 20px 0 8px;
+    }
+
+    .hero-scroll-hint {
+      margin-top: 48px;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      animation: gentle-bounce 2.5s ease-in-out infinite;
+    }
+
+    @keyframes gentle-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(6px); }
+    }
+
+    /* ── Auth Panel (Step 2) ── */
+    .auth-panel {
+      display: none;
+      max-width: 420px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .auth-panel.active {
+      display: block;
+      animation: authFadeIn 0.4s ease;
+    }
+
+    @keyframes authFadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .auth-role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 8px 20px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      border: 1px solid rgba(59, 130, 246, 0.15);
+    }
+
+    .auth-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .auth-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+
+    .auth-form {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      text-align: left;
+    }
+
+    .auth-field {
+      margin-bottom: 16px;
+    }
+
+    .auth-field label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .auth-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: var(--font);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .auth-input:focus {
+      border-color: var(--accent);
+    }
+
+    .auth-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .auth-submit {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: opacity 0.2s, transform 0.2s;
+      margin-top: 4px;
+    }
+
+    .auth-submit:hover {
+      opacity: 0.85;
+      transform: translateY(-1px);
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .change-role-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      cursor: pointer;
+      font-family: var(--font);
+      margin-top: 24px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    .change-role-btn:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* Hide role step when auth is active */
+    .role-step.hidden { display: none; }
+
+    /* ── About ── */
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .about-text .section-desc { margin-bottom: 24px; }
+
+    .about-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .stat-value.blue { color: var(--accent); }
+    .stat-value.green { color: var(--green); }
+    .stat-value.orange { color: var(--orange); }
+    .stat-value.purple { color: var(--purple); }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* ── How It Works ── */
+    #how-it-works { background: var(--bg-card); }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    .step-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    .step-num {
+      position: absolute;
+      top: 12px;
+      left: 16px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+
+    .step-icon {
+      font-size: 2rem;
+      margin-bottom: 16px;
+      margin-top: 8px;
+    }
+
+    .step-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+    }
+
+    .step-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── Features ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      transition: border-color 0.2s;
+    }
+
+    .feature-card:hover { border-color: rgba(255,255,255,0.12); }
+
+    .feature-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .feature-icon-box.rose { background: var(--rose-soft); }
+    .feature-icon-box.blue { background: var(--accent-soft); }
+    .feature-icon-box.purple { background: var(--purple-soft); }
+    .feature-icon-box.green { background: var(--green-soft); }
+
+    .feature-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+    }
+
+    .feature-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── Garage Section ── */
+    #for-garages { background: var(--bg-card); }
+
+    .garage-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .garage-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      text-align: center;
+    }
+
+    .garage-icon {
+      font-size: 2rem;
+      margin-bottom: 14px;
+    }
+
+    .garage-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+    }
+
+    .garage-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── CTA Banner ── */
+    .cta-banner {
+      text-align: center;
+      padding: 80px 0;
+    }
+
+    .cta-banner h2 {
+      font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .cta-banner p {
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      font-size: 1rem;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary-lg {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font);
+      text-decoration: none;
+    }
+
+    .btn-primary-lg:hover {
+      opacity: 0.85;
+      transform: translateY(-2px);
+    }
+
+    .btn-outline-lg {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font);
+      text-decoration: none;
+    }
+
+    .btn-outline-lg:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-brand {
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .footer-brand span { font-size: 1.1rem; }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.82rem;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--text); }
+
+    .footer-copy {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+
+    /* ── Loading ── */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,10,18,0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      gap: 16px;
+    }
+
+    .loading-overlay.hidden { display: none; }
+
+    .loader {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* ── Toast ── */
+    .toast-container {
+      position: fixed;
+      top: 80px; right: 24px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* ── Scroll Reveal ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Mobile Nav Toggle ── */
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      section { padding: 56px 0; }
+
+      .topnav-links { display: none; }
+      .topnav-cta { display: none; }
+      .nav-toggle { display: block; }
+
+      .topnav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 60px; left: 0; right: 0;
+        background: rgba(10,10,18,0.97);
+        backdrop-filter: blur(16px);
+        padding: 20px 24px;
+        gap: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .role-cards {
+        grid-template-columns: 1fr;
+        max-width: 320px;
+      }
+
+      .about-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+
+      .steps-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .garage-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container { padding: 0 16px; }
+
+      .steps-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero h1 { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Sticky Top Nav ─── -->
+  <nav class="topnav" id="topNav">
+    <div class="topnav-inner">
+      <a href="#" class="topnav-logo"><span>⚡</span> VRS</a>
+      <ul class="topnav-links" id="navLinks">
+        <li><a href="#about">About</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#for-garages">For Garages</a></li>
+      </ul>
+      <a href="#hero" class="topnav-cta">Get Started</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">☰</button>
+    </div>
+  </nav>
+
+  <!-- ─── Hero ─── -->
+  <section class="hero" id="hero">
+    <div class="container">
+      <div class="hero-inner">
+
+        <!-- ═══ STEP 1: Role Selection ═══ -->
+        <div class="role-step" id="roleStep">
+          <div class="hero-badge">⚡ Emergency Repair Platform</div>
+          <h1>Welcome to <span class="gradient-text">VRS</span></h1>
+          <p class="hero-subtitle">Emergency vehicle repair assistance made easy. Find nearby mechanics, get instant help, and track repairs in real-time.</p>
+
+          <div class="role-cards">
+            <a class="role-card" id="carOwnerCard" onclick="selectRole('car_owner')">
+              <div class="role-icon">🚗</div>
+              <div class="role-name">Car Owner</div>
+              <div class="role-desc">Find mechanics & book repairs</div>
+            </a>
+            <a class="role-card" id="garageOwnerCard" onclick="selectRole('garage_owner')">
+              <div class="role-icon">🔧</div>
+              <div class="role-name">Garage Owner</div>
+              <div class="role-desc">Manage repair requests</div>
+            </a>
+          </div>
+
+          <div class="hero-scroll-hint">
+            <span>Scroll to explore</span>
+            <span>↓</span>
+          </div>
+        </div>
+
+        <!-- ═══ STEP 2: Authentication ═══ -->
+        <div class="auth-panel" id="authPanel">
+          <div class="auth-role-badge" id="authRoleBadge">🚗 Car Owner</div>
+          <h2 class="auth-title" id="authTitle">Continue as Car Owner</h2>
+          <p class="auth-subtitle">Sign in to access your dashboard</p>
+
+          <div class="auth-form">
+            <!-- Google Login -->
+            <button class="hero-google-btn" id="authGoogleBtn" onclick="handleGoogleLogin()">
+              <svg viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 001 12c0 1.77.42 3.44 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Continue with Google
+            </button>
+
+            <div class="auth-divider">or use email</div>
+
+            <!-- Email / Password -->
+            <div class="auth-field">
+              <label for="authEmail">Email</label>
+              <input type="email" class="auth-input" id="authEmail" placeholder="you@example.com" autocomplete="email">
+            </div>
+            <div class="auth-field">
+              <label for="authPassword">Password</label>
+              <input type="password" class="auth-input" id="authPassword" placeholder="••••••••" autocomplete="current-password">
+            </div>
+
+            <button class="auth-submit" id="authSubmitBtn" onclick="handleEmailLogin()">Sign In</button>
+          </div>
+
+          <button class="change-role-btn" onclick="changeRole()">← Change Role</button>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── About ─── -->
+  <section id="about">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-text reveal">
+          <div class="section-label">About VRS</div>
+          <h2 class="section-title">Roadside emergencies, solved instantly.</h2>
+          <p class="section-desc">VRS connects stranded vehicle owners with verified nearby mechanics in seconds. Whether it's a flat tire at midnight or an engine breakdown on the highway, help is just a tap away.</p>
+          <p class="section-desc" style="margin-top:12px;">Our platform uses real-time GPS tracking, AI-powered diagnostics, and a trust-based verification system to ensure fast, reliable, and safe roadside assistance.</p>
+        </div>
+        <div class="about-stats reveal">
+          <div class="stat-card">
+            <div class="stat-value blue">500+</div>
+            <div class="stat-label">Verified Mechanics</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value green">8 min</div>
+            <div class="stat-label">Avg. Response Time</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value orange">24/7</div>
+            <div class="stat-label">Availability</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value purple">4.8★</div>
+            <div class="stat-label">User Rating</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── How It Works ─── -->
+  <section id="how-it-works">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-label">How It Works</div>
+        <h2 class="section-title">Get help in 4 simple steps</h2>
+        <p class="section-desc">From breakdown to repair — the entire process is seamless and transparent.</p>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card reveal">
+          <div class="step-num">01</div>
+          <div class="step-icon">📍</div>
+          <div class="step-title">Detect Location</div>
+          <div class="step-desc">Your GPS location is automatically detected to find the closest help.</div>
+        </div>
+        <div class="step-card reveal">
+          <div class="step-num">02</div>
+          <div class="step-icon">🔍</div>
+          <div class="step-title">Find Mechanics</div>
+          <div class="step-desc">Browse nearby verified mechanics sorted by distance and rating.</div>
+        </div>
+        <div class="step-card reveal">
+          <div class="step-num">03</div>
+          <div class="step-icon">📋</div>
+          <div class="step-title">Request Service</div>
+          <div class="step-desc">Describe your issue and send a service request with one tap.</div>
+        </div>
+        <div class="step-card reveal">
+          <div class="step-num">04</div>
+          <div class="step-icon">🛤️</div>
+          <div class="step-title">Track Mechanic</div>
+          <div class="step-desc">Watch your mechanic's location in real-time as they arrive.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Features ─── -->
+  <section id="features">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-label">Features</div>
+        <h2 class="section-title">Everything you need, built in</h2>
+        <p class="section-desc">Powerful tools designed for real emergencies.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card reveal">
+          <div class="feature-icon-box rose">🚨</div>
+          <div>
+            <div class="feature-title">Emergency Request</div>
+            <div class="feature-desc">One-tap SOS button sends an urgent alert to all nearby mechanics with your exact location.</div>
+          </div>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon-box blue">📡</div>
+          <div>
+            <div class="feature-title">Real-Time Tracking</div>
+            <div class="feature-desc">Track your assigned mechanic on a live map with accurate ETA and route updates.</div>
+          </div>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon-box purple">🤖</div>
+          <div>
+            <div class="feature-title">AI Diagnosis</div>
+            <div class="feature-desc">Describe symptoms or upload a photo — our AI suggests possible issues and urgency levels.</div>
+          </div>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon-box green">📅</div>
+          <div>
+            <div class="feature-title">Smart Booking</div>
+            <div class="feature-desc">Book regular maintenance or emergency repairs with transparent pricing and reviews.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── For Garages ─── -->
+  <section id="for-garages">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-label">For Garage Owners</div>
+        <h2 class="section-title">Grow your garage business</h2>
+        <p class="section-desc">A dedicated dashboard to manage incoming repair requests, track jobs, and build your reputation.</p>
+      </div>
+      <div class="garage-grid">
+        <div class="garage-card reveal">
+          <div class="garage-icon">📥</div>
+          <div class="garage-title">Manage Requests</div>
+          <div class="garage-desc">View incoming service requests with customer details, issue description, and location.</div>
+        </div>
+        <div class="garage-card reveal">
+          <div class="garage-icon">✅</div>
+          <div class="garage-title">Accept or Reject</div>
+          <div class="garage-desc">Quickly accept jobs that match your skills and availability, or pass on others.</div>
+        </div>
+        <div class="garage-card reveal">
+          <div class="garage-icon">📊</div>
+          <div class="garage-title">Track Progress</div>
+          <div class="garage-desc">Monitor active repairs, mark completions, and view your service history and earnings.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── CTA Banner ─── -->
+  <section class="cta-banner">
+    <div class="container reveal">
+      <h2>Ready to get started?</h2>
+      <p>Join thousands of drivers and garage owners using VRS every day.</p>
+      <div class="cta-buttons">
+        <a href="#hero" class="btn-primary-lg">Choose Your Role</a>
+        <button class="btn-outline-lg" onclick="handleGoogleLogin()">Sign in with Google</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Footer ─── -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand"><span>⚡</span> VRS</div>
+        <ul class="footer-links">
+          <li><a href="#about">About</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#for-garages">For Garages</a></li>
+        </ul>
+        <div class="footer-copy">© 2026 VRS. All rights reserved.</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ─── Loading Overlay ─── -->
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loader"></div>
+    <p class="loading-text">Connecting to your account...</p>
+  </div>
+
+  <!-- ─── Toast Container ─── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ─── Scripts ─── -->
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    let selectedRole = null;
+
+    // ── Step 1: Select Role → Show Auth Panel ──
+    function selectRole(role) {
+      selectedRole = role;
+      localStorage.setItem('vrs_user_role', role);
+
+      // Update auth panel text
+      const roleLabel = role === 'car_owner' ? '🚗 Car Owner' : '🔧 Garage Owner';
+      const roleTitle = role === 'car_owner' ? 'Continue as Car Owner' : 'Continue as Garage Owner';
+      document.getElementById('authRoleBadge').textContent = roleLabel;
+      document.getElementById('authTitle').textContent = roleTitle;
+
+      // Transition: hide role step, show auth panel
+      document.getElementById('roleStep').classList.add('hidden');
+      document.getElementById('authPanel').classList.add('active');
+
+      // Scroll to top of hero
+      document.getElementById('hero').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ── Go Back to Role Selection ──
+    function changeRole() {
+      selectedRole = null;
+      localStorage.removeItem('vrs_user_role');
+      document.getElementById('authPanel').classList.remove('active');
+      document.getElementById('roleStep').classList.remove('hidden');
+    }
+
+    // ── Email/Password Login ──
+    async function handleEmailLogin() {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+
+      if (!email || !password) {
+        if (typeof showToast === 'function') showToast('Please enter email and password', 'error');
+        return;
+      }
+
+      const loading = document.getElementById('loadingOverlay');
+      if (loading) loading.classList.remove('hidden');
+
+      try {
+        const client = initSupabase();
+        if (!client) throw new Error('Auth not initialized');
+
+        // Try sign in first
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
+
+        if (error && error.message.includes('Invalid login')) {
+          // User doesn't exist — sign up
+          const { data: signUpData, error: signUpError } = await client.auth.signUp({ email, password });
+          if (signUpError) throw signUpError;
+          if (typeof showToast === 'function') showToast('Account created! Check your email to confirm.', 'success');
+          if (loading) loading.classList.add('hidden');
+          return;
+        }
+
+        if (error) throw error;
+
+        // Success → redirect
+        if (typeof showToast === 'function') {
+          showToast(`Welcome back, ${data.user?.email}!`, 'success');
+        }
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 600);
+      } catch (err) {
+        console.error('Email login error:', err);
+        if (typeof showToast === 'function') showToast('Login failed: ' + (err.message || 'Please try again'), 'error');
+        if (loading) loading.classList.add('hidden');
+      }
+    }
+
+    // Enter key on password field
+    document.addEventListener('DOMContentLoaded', () => {
+      const pwField = document.getElementById('authPassword');
+      if (pwField) {
+        pwField.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') handleEmailLogin();
+        });
+      }
+    });
+
+    // ── Mobile Nav Toggle ──
+    document.getElementById('navToggle').addEventListener('click', () => {
+      document.getElementById('navLinks').classList.toggle('open');
+    });
+
+    document.querySelectorAll('#navLinks a').forEach(link => {
+      link.addEventListener('click', () => {
+        document.getElementById('navLinks').classList.remove('open');
+      });
+    });
+
+    // ── Scroll Reveal ──
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // ── Auth: OAuth Redirect + Already Logged In ──
+    document.addEventListener('DOMContentLoaded', async () => {
+      let redirecting = false;
+
+      if (typeof onAuthStateChange === 'function') {
+        onAuthStateChange((event, user) => {
+          if (event === 'SIGNED_IN' && user && !redirecting) {
+            redirecting = true;
+            if (typeof showToast === 'function') {
+              showToast(`Welcome, ${user.user_metadata?.full_name || user.email}!`, 'success');
+            }
+            setTimeout(() => {
+              window.location.href = 'dashboard.html';
+            }, 800);
+          }
+        });
+      }
+
+      if (typeof getCurrentUser === 'function') {
+        const user = await getCurrentUser();
+        if (user && !redirecting) {
+          window.location.href = 'dashboard.html';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

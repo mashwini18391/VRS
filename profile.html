@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Your VRS profile and settings.">
+  <meta name="theme-color" content="#06060b">
+  <title>Profile — VRS</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Desktop Nav -->
+  <nav class="desktop-nav">
+    <div class="desktop-nav-logo">⚡ VRS</div>
+    <div class="desktop-nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="map.html">Map</a>
+      <a href="history.html">History</a>
+      <a href="ai-diagnosis.html" class="car-owner-only">AI Assist</a>
+      <a href="profile.html" class="active">Profile</a>
+    </div>
+  </nav>
+
+  <div class="page-container animate-fadeIn">
+    <!-- Profile Header -->
+    <div class="profile-header">
+      <div class="profile-avatar">
+        <img id="profileAvatar" src="" alt="Profile Photo">
+      </div>
+      <h2 class="profile-name" id="profileName">Loading...</h2>
+      <p class="profile-email" id="profileEmail">loading@email.com</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="flex justify-between mb-lg car-owner-only" style="gap:var(--space-sm);">
+      <div class="card text-center flex-1" style="padding:var(--space-md);">
+        <div style="font-size:var(--fs-xl);font-weight:800;color:var(--emergency-blue);">12</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-tertiary);">Total Repairs</div>
+      </div>
+      <div class="card text-center flex-1" style="padding:var(--space-md);">
+        <div style="font-size:var(--fs-xl);font-weight:800;color:var(--warning);">4.8</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-tertiary);">Avg Rating</div>
+      </div>
+      <div class="card text-center flex-1" style="padding:var(--space-md);">
+        <div style="font-size:var(--fs-xl);font-weight:800;color:var(--success);">₹18K</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-tertiary);">Total Spent</div>
+      </div>
+    </div>
+    
+    <!-- Garage Owner Stats -->
+    <div class="flex justify-between mb-lg garage-only" style="gap:var(--space-sm);">
+      <div class="card text-center flex-1" style="padding:var(--space-md);">
+        <div style="font-size:var(--fs-xl);font-weight:800;color:var(--success);">142</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-tertiary);">Jobs Done</div>
+      </div>
+      <div class="card text-center flex-1" style="padding:var(--space-md);">
+        <div style="font-size:var(--fs-xl);font-weight:800;color:var(--warning);">4.9</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-tertiary);">Rating</div>
+      </div>
+      <div class="card text-center flex-1" style="padding:var(--space-md);">
+        <div style="font-size:var(--fs-xl);font-weight:800;color:var(--emergency-blue);">₹1.2L</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-tertiary);">Earnings</div>
+      </div>
+    </div>
+
+    <!-- My Vehicles -->
+    <div class="section car-owner-only">
+      <div class="flex justify-between items-center mb-md">
+        <h2 class="section-title" style="margin-bottom:0;">My Vehicles</h2>
+        <button class="btn btn-ghost btn-sm" onclick="showToast('Add vehicle feature coming soon', 'info')">+ Add</button>
+      </div>
+      <div class="card mb-md" style="padding:var(--space-md);">
+        <div class="flex items-center gap-md">
+          <span style="font-size:1.5rem;">🚗</span>
+          <div class="flex-1">
+            <div class="font-semibold">Hyundai i20</div>
+            <div class="text-muted" style="font-size:var(--fs-sm);">2022 • MH-12-AB-1234</div>
+          </div>
+          <span class="badge badge-active">Active</span>
+        </div>
+      </div>
+      <div class="card" style="padding:var(--space-md);">
+        <div class="flex items-center gap-md">
+          <span style="font-size:1.5rem;">🏍️</span>
+          <div class="flex-1">
+            <div class="font-semibold">Honda Activa</div>
+            <div class="text-muted" style="font-size:var(--fs-sm);">2023 • MH-12-CD-5678</div>
+          </div>
+          <span class="badge badge-active">Active</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Operating Details -->
+    <div class="section garage-only">
+      <h2 class="section-title">Operating Details</h2>
+      <div class="card mb-md" style="padding:var(--space-md);">
+        <div class="flex items-center gap-md">
+          <span style="font-size:1.5rem;">🔧</span>
+          <div class="flex-1">
+            <div class="font-semibold">Specialization</div>
+            <div class="text-muted" style="font-size:var(--fs-sm);">Engine & Electricals</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="padding:var(--space-md);">
+        <div class="flex items-center gap-md">
+          <span style="font-size:1.5rem;">⏱️</span>
+          <div class="flex-1">
+            <div class="font-semibold">Working Hours</div>
+            <div class="text-muted" style="font-size:var(--fs-sm);">24/7 Availability: <strong style="color:var(--success);">ON</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="section">
+      <h2 class="section-title">Settings</h2>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="settings-item">
+          <div class="settings-left">
+            <div class="settings-icon">🔔</div>
+            <span class="settings-label">Notifications</span>
+          </div>
+          <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+        </div>
+        <div class="settings-item">
+          <div class="settings-left">
+            <div class="settings-icon">📍</div>
+            <span class="settings-label">Location Sharing</span>
+          </div>
+          <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+        </div>
+        <div class="settings-item" style="cursor: pointer;">
+          <div class="settings-left">
+            <div class="settings-icon">🌙</div>
+            <span class="settings-label">Dark Mode</span>
+          </div>
+          <div class="toggle active" id="themeToggle"></div>
+        </div>
+        <div class="settings-item" onclick="openPrivacy()" style="cursor: pointer;">
+          <div class="settings-left">
+            <div class="settings-icon">🔒</div>
+            <span class="settings-label">Privacy</span>
+          </div>
+          <span class="settings-arrow">→</span>
+        </div>
+        <div class="settings-item" onclick="openHelp()" style="cursor: pointer;">
+          <div class="settings-left">
+            <div class="settings-icon">❓</div>
+            <span class="settings-label">Help & Support</span>
+          </div>
+          <span class="settings-arrow">→</span>
+        </div>
+        <div class="settings-item" onclick="openAbout()" style="cursor: pointer;">
+          <div class="settings-left">
+            <div class="settings-icon">ℹ️</div>
+            <span class="settings-label">About VRS</span>
+          </div>
+          <span class="settings-arrow">→</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logout -->
+    <button class="btn btn-outline btn-block mb-lg" style="border-color:var(--emergency-red);color:var(--emergency-red);" onclick="handleSignOut()">
+      🚪 Sign Out
+    </button>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-item"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></a>
+    <a href="map.html" class="nav-item"><span class="nav-icon">🗺️</span><span class="nav-label">Map</span></a>
+    <a href="ai-diagnosis.html" class="nav-item car-owner-only"><span class="nav-icon">🤖</span><span class="nav-label">AI</span></a>
+    <a href="history.html" class="nav-item"><span class="nav-icon">📋</span><span class="nav-label">History</span></a>
+    <a href="profile.html" class="nav-item active"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></a>
+  </nav>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 0. ROLE-BASED PROFILE TITLE
+      const role = localStorage.getItem('vrs_user_role') || 'car_owner';
+      if (role === 'garage_owner') {
+        document.getElementById('profileName').textContent = 'My Garage';
+        document.getElementById('profileEmail').textContent = 'garage@vrs-partner.com';
+        document.getElementById('profileAvatar').src = 'https://ui-avatars.com/api/?name=My+Garage&background=ff2d55&color=fff&size=150';
+        // Update page title
+        document.title = 'Garage Profile — VRS';
+      } else {
+        // 1. DUMMY DATA FOR CAR OWNER
+        document.getElementById('profileName').textContent = 'Arjun Kumar';
+        document.getElementById('profileEmail').textContent = 'arjun.kumar@example.com';
+        document.getElementById('profileAvatar').src = 'https://ui-avatars.com/api/?name=Arjun+Kumar&background=007aff&color=fff&size=150';
+      }
+
+      // 2. DARK MODE TOGGLE
+      const themeToggle = document.getElementById('themeToggle');
+      
+      // Initialize toggle state from body class (set by app.js)
+      if (document.body.classList.contains('light-theme')) {
+        themeToggle.classList.remove('active');
+      }
+
+      themeToggle.addEventListener('click', () => {
+        const isLight = document.body.classList.contains('light-theme');
+        if (isLight) {
+          document.body.classList.remove('light-theme');
+          themeToggle.classList.add('active'); // Active means dark (default UI state)
+          localStorage.setItem('theme', 'dark');
+        } else {
+          document.body.classList.add('light-theme');
+          themeToggle.classList.remove('active');
+          localStorage.setItem('theme', 'light');
+        }
+      });
+      
+      // Attempt auth but fallback cleanly to dummy data
+      if (typeof requireAuth === 'function') {
+        requireAuth().then(user => {
+          if (user && user.user_metadata) {
+            const fallbackName = role === 'garage_owner' ? 'My Garage' : 'Arjun Kumar';
+            const fallbackEmail = role === 'garage_owner' ? 'garage@vrs-partner.com' : 'arjun.kumar@example.com';
+            document.getElementById('profileName').textContent = user.user_metadata?.full_name || fallbackName;
+            document.getElementById('profileEmail').textContent = user.email || fallbackEmail;
+            if (user.user_metadata?.avatar_url) {
+              document.getElementById('profileAvatar').src = user.user_metadata.avatar_url;
+            }
+          }
+        }).catch(err => console.log('Auth check skipped. Using dummy data.'));
+      }
+    });
+
+    // 3. SECTIONS UI MODALS
+    function showInfoModal(title, contentHTML) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.onclick = (e) => {
+        if (e.target === overlay) overlay.remove();
+      };
+      
+      overlay.innerHTML = `
+        <div class="modal-sheet animate-slideUp">
+          <div class="modal-handle"></div>
+          <div class="modal-title" style="margin-bottom:var(--space-md);">${title}</div>
+          <div class="modal-content" style="padding:0; font-size:var(--fs-md); color:var(--text-secondary); line-height: 1.6;">
+            ${contentHTML}
+          </div>
+          <button class="btn btn-ghost btn-block mt-lg" onclick="this.closest('.modal-overlay').remove();">Close</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    function openPrivacy() {
+      showInfoModal('Privacy Policy', `
+        <p>Your privacy is important to us. VRS collects minimal metrics to enhance your mechanic booking experience.</p>
+        <ul style="list-style-type: none; margin-top: var(--space-md); padding: 0;">
+          <li style="margin-bottom:var(--space-sm);">✅ Location is tracked only during active bookings.</li>
+          <li style="margin-bottom:var(--space-sm);">✅ We do not share your contact info with 3rd parties.</li>
+          <li style="margin-bottom:var(--space-sm);">✅ All transaction data is encrypted securely.</li>
+        </ul>
+      `);
+    }
+
+    function openHelp() {
+      showInfoModal('Help & Support', `
+        <p>If you're having issues, our 24/7 support branch is here to help.</p>
+        <div style="margin-top:var(--space-lg); padding:var(--space-md); background:var(--bg-elevated); border-radius:var(--radius-md); border:1px solid var(--border-default);">
+          <div style="margin-bottom:var(--space-sm);"><strong>✉️ Email:</strong> support@vrs.com</div>
+          <div style="margin-bottom:var(--space-sm);"><strong>📞 Phone:</strong> +91 800 123 4567</div>
+          <div><strong>⏱️ Hours:</strong> 24/7 Mon-Sun</div>
+        </div>
+      `);
+    }
+
+    function openAbout() {
+      showInfoModal('About VRS', `
+        <p><strong>Vehicle Repair System (VRS)</strong> is an on-demand roadside assistance platform matching drivers with verified nearby mechanics instantly.</p>
+        <p style="margin-top:var(--space-lg);"><strong>Version:</strong> 1.0.4 (Build 42)</p>
+        <p style="margin-top:var(--space-sm);">Made with passion for safety and reliability.</p>
+      `);
+    }
+  </script>
+</body>
+</html>

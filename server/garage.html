@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Garage Owner Portal — VRS</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <style>
+    body { padding-bottom: 2rem; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-family); }
+    .page-header { text-align: center; margin-bottom: var(--space-xl); }
+    .form-group { margin-bottom: var(--space-md); }
+    .form-label { display: block; margin-bottom: var(--space-xs); font-weight: 500; font-size: var(--fs-sm); color: var(--text-secondary); }
+    .form-input { width: 100%; border: 1px solid var(--border-strong); background: var(--bg-surface); padding: 12px; color: var(--text-primary); border-radius: var(--radius-md); }
+    .booking-card { display: flex; flex-direction: column; gap: var(--space-sm); background: var(--bg-surface); padding: var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--border-default); margin-bottom: var(--space-md); }
+    .booking-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: var(--space-xs); margin-bottom: var(--space-xs); }
+    .hidden { display: none !important; }
+    .action-buttons { display: flex; gap: var(--space-sm); margin-top: var(--space-sm); }
+  </style>
+</head>
+<body>
+  <div class="page-container animate-slideDown">
+    
+    <!-- REGISTRATION SECTION -->
+    <div id="registrationSection" class="card" style="margin-top: 5vh;">
+      <div class="page-header">
+        <h1 class="page-title">Garage Partner Portal</h1>
+        <p class="text-secondary">Register your garage to start receiving requests.</p>
+      </div>
+      <form id="registerForm">
+        <div class="form-group">
+          <label class="form-label">Owner Name</label>
+          <input type="text" class="form-input" id="ownerName" placeholder="e.g. Ramesh Kumar" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" class="form-input" id="phone" placeholder="e.g. +91 9876543210" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Garage Name</label>
+          <input type="text" class="form-input" id="garageName" placeholder="e.g. QuickFix Auto Motors" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block mt-lg">Register Garage</button>
+      </form>
+    </div>
+
+    <!-- DASHBOARD SECTION -->
+    <div id="dashboardSection" class="hidden">
+      <div class="page-header" style="text-align: left; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h1 class="page-title" id="displayGarageName">Dashboard</h1>
+          <p class="text-secondary" style="font-size: var(--fs-sm);">Incoming Service Requests</p>
+        </div>
+        <button class="btn btn-sm btn-outline" style="border-color:var(--emergency-red); color:var(--emergency-red);" onclick="logout()">Logout</button>
+      </div>
+
+      <div id="bookingsList">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DUMMY BOOKINGS DATA
+    const initialBookings = [
+      { id: 'REQ-01', user: 'Arun M.', vehicle: 'Honda City', issue: 'Engine overheating, producing smoke', phone: '+91 98****1234', status: 'pending', distance: '1.2 km' },
+      { id: 'REQ-02', user: 'Priya K.', vehicle: 'Hyundai i20', issue: 'Flat tire near highway exit', phone: '+91 99****5678', status: 'pending', distance: '3.4 km' },
+      { id: 'REQ-03', user: 'Sameer J.', vehicle: 'Royal Enfield', issue: 'Battery completely dead', phone: '+91 91****0001', status: 'pending', distance: '0.8 km' },
+    ];
+
+    let currentDummyBookings = [];
+
+    // Initialize Event Listener
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('registerForm').addEventListener('submit', handleRegister);
+    });
+
+    function showSuccessMessage(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'animate-slideUp';
+      toast.textContent = msg;
+      toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--success);color:white;padding:12px 24px;border-radius:24px;box-shadow:var(--shadow-md);z-index:1000;font-weight:600;font-size:var(--fs-md);';
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function handleRegister(e) {
+      e.preventDefault();
+      const gName = document.getElementById('garageName').value;
+      if (!gName) return;
+      
+      document.getElementById('displayGarageName').textContent = gName;
+      document.getElementById('registrationSection').classList.add('hidden');
+      document.getElementById('dashboardSection').classList.remove('hidden');
+      document.getElementById('dashboardSection').classList.add('animate-fadeIn');
+      
+      // Add success toast
+      showSuccessMessage('Garage registered successfully!');
+      
+      // Reset dummy bookings map when logging in
+      currentDummyBookings = JSON.parse(JSON.stringify(initialBookings));
+      renderBookings();
+    }
+
+    function logout() {
+      document.getElementById('dashboardSection').classList.add('hidden');
+      document.getElementById('registrationSection').classList.remove('hidden');
+      document.getElementById('registrationSection').classList.add('animate-slideDown');
+      document.getElementById('registerForm').reset();
+    }
+
+    function updateBookingStatus(id, newStatus) {
+      const booking = currentDummyBookings.find(b => b.id === id);
+      if (booking) {
+        booking.status = newStatus;
+        renderBookings();
+      }
+    }
+
+    function renderBookings() {
+      const container = document.getElementById('bookingsList');
+      container.innerHTML = '';
+      
+      if (currentDummyBookings.length === 0) {
+        container.innerHTML = '<div class="card text-center" style="color:var(--text-secondary)">No incoming requests.</div>';
+        return;
+      }
+
+      currentDummyBookings.forEach(booking => {
+        let statusBadge = '';
+        let actionButtons = '';
+
+        if (booking.status === 'pending') {
+          statusBadge = '<span class="badge" style="background:var(--warning-soft);color:var(--warning)">⏳ Pending</span>';
+          actionButtons = `
+            <div class="action-buttons">
+              <button class="btn btn-sm btn-primary" style="flex:1; background:var(--success); color:white; border:none;" onclick="updateBookingStatus('${booking.id}', 'accepted')">✅ Accept</button>
+              <button class="btn btn-sm btn-outline" style="flex:1; border-color:var(--emergency-red); color:var(--emergency-red);" onclick="updateBookingStatus('${booking.id}', 'rejected')">❌ Reject</button>
+            </div>
+          `;
+        } else if (booking.status === 'accepted') {
+          statusBadge = '<span class="badge" style="background:var(--success-soft);color:var(--success)">✅ Accepted</span>';
+          actionButtons = `
+             <div class="action-buttons" style="background:var(--success-soft); padding:8px; border-radius:var(--radius-sm); text-align:center;">
+              <span style="color:var(--success); font-weight:600; font-size:var(--fs-sm);">Job Assigned to You. Route Started.</span>
+            </div>
+          `;
+        } else if (booking.status === 'rejected') {
+          statusBadge = '<span class="badge" style="background:var(--emergency-red-soft);color:var(--emergency-red)">❌ Rejected</span>';
+          actionButtons = `
+             <div class="action-buttons" style="background:var(--emergency-red-soft); padding:8px; border-radius:var(--radius-sm); text-align:center;">
+              <span style="color:var(--emergency-red); font-weight:600; font-size:var(--fs-sm);">Request Ignored. Passed to next.</span>
+            </div>
+          `;
+        }
+
+        const html = `
+          <div class="booking-card animate-slideUp">
+            <div class="booking-header">
+              <strong>${booking.id} — ${booking.user}</strong>
+              ${statusBadge}
+            </div>
+            <div style="font-size:var(--fs-sm); color:var(--text-secondary);">
+              <div style="margin-bottom: 4px;">🚗 <strong style="color:var(--text-primary);">Vehicle:</strong> ${booking.vehicle}</div>
+              <div style="margin-bottom: 4px;">📍 <strong style="color:var(--text-primary);">Distance:</strong> ${booking.distance}</div>
+              <div style="margin-bottom: 4px;">📞 <strong style="color:var(--text-primary);">Contact:</strong> ${booking.phone}</div>
+              <div style="color:var(--emergency-red); margin-top: 8px;">⚠️ ${booking.issue}</div>
+            </div>
+            ${actionButtons}
+          </div>
+        `;
+        container.innerHTML += html;
+      });
+    }
+  </script>
+</body>
+</html>

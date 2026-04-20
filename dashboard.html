@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="VRS Dashboard — Manage your emergency repair requests.">
+  <meta name="theme-color" content="#06060b">
+  <title>Dashboard — VRS</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Desktop Nav -->
+  <nav class="desktop-nav" id="desktopNav">
+    <div class="desktop-nav-logo">⚡ VRS</div>
+    <div class="desktop-nav-links">
+      <a href="dashboard.html" class="active">Dashboard</a>
+      <a href="map.html" id="desktopNavMap">Map</a>
+      <a href="history.html" id="desktopNavHistory">History</a>
+      <a href="ai-diagnosis.html" id="desktopNavAI" class="car-owner-only">AI Assist</a>
+      <a href="profile.html">Profile</a>
+    </div>
+    <div class="desktop-nav-profile">
+      <img id="desktopAvatar" src="" alt="" style="width:32px;height:32px;border-radius:50%;" class="hidden">
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════
+       CAR OWNER DASHBOARD (default — unchanged)
+       ═══════════════════════════════════════════════ -->
+  <div class="page-container animate-fadeIn" id="carOwnerDashboard">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <p class="text-muted" style="font-size:var(--fs-sm);">Welcome back</p>
+        <h1 class="page-title" id="userName">Loading...</h1>
+      </div>
+      <a href="profile.html" id="userAvatarLink">
+        <div class="profile-avatar" style="width:44px;height:44px;margin:0;border-width:2px;">
+          <img id="userAvatar" src="" alt="Profile" style="width:100%;height:100%;object-fit:cover;">
+        </div>
+      </a>
+    </div>
+
+    <!-- Active Request -->
+    <div id="activeRequestSection" class="section hidden">
+      <div class="active-request-card animate-scaleIn">
+        <div class="request-status-bar">
+          <div class="status-dot"></div>
+          <span class="status-text" id="requestStatus">Mechanic En Route</span>
+        </div>
+        <div class="flex items-center gap-md mb-md" style="position:relative;">
+          <div class="mechanic-avatar">🔧</div>
+          <div class="mechanic-info">
+            <div class="mechanic-name" id="activeMechanicName">Rajesh Kumar</div>
+            <div class="mechanic-specialty" id="activeMechanicSpecialty">Engine Specialist</div>
+          </div>
+          <div class="mechanic-eta">
+            <div class="mechanic-eta-value" id="activeETA">8</div>
+            <div class="mechanic-eta-label">min ETA</div>
+          </div>
+        </div>
+        <div class="flex gap-sm">
+          <a href="tracking.html" class="btn btn-primary btn-sm flex-1">📍 Track</a>
+          <a href="chat.html" class="btn btn-outline btn-sm flex-1">💬 Chat</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="section">
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="quick-actions-grid stagger-children">
+        <a href="map.html" class="action-card">
+          <div class="action-icon red">🚨</div>
+          <span class="action-label">Emergency Request</span>
+        </a>
+        <a href="map.html" class="action-card">
+          <div class="action-icon blue">🗺️</div>
+          <span class="action-label">Find Mechanics</span>
+        </a>
+        <a href="ai-diagnosis.html" class="action-card">
+          <div class="action-icon green">🤖</div>
+          <span class="action-label">AI Diagnosis</span>
+        </a>
+        <a href="history.html" class="action-card">
+          <div class="action-icon yellow">📋</div>
+          <span class="action-label">Repair History</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="section">
+      <div class="flex justify-between items-center mb-md">
+        <h2 class="section-title" style="margin-bottom:0;">Recent Activity</h2>
+        <a href="history.html" class="btn btn-ghost btn-sm">View All →</a>
+      </div>
+      <div id="recentActivity" class="stagger-children">
+        <!-- Populated by JS -->
+      </div>
+      <div id="emptyActivity" class="empty-state hidden">
+        <div class="empty-state-icon">🔧</div>
+        <div class="empty-state-title">No Activity Yet</div>
+        <p class="empty-state-text">Your repair requests will appear here.</p>
+        <a href="map.html" class="btn btn-primary">Find Nearby Mechanics</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       GARAGE OWNER DASHBOARD (hidden by default)
+       ═══════════════════════════════════════════════ -->
+  <div class="page-container animate-fadeIn hidden" id="garageOwnerDashboard">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <p class="text-muted" style="font-size:var(--fs-sm);">Garage Dashboard</p>
+        <h1 class="page-title" id="goUserName">Loading...</h1>
+      </div>
+      <a href="profile.html">
+        <div class="profile-avatar" style="width:44px;height:44px;margin:0;border-width:2px;">
+          <img id="goUserAvatar" src="" alt="Profile" style="width:100%;height:100%;object-fit:cover;">
+        </div>
+      </a>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="go-stats-row stagger-children" id="goStatsRow">
+      <div class="go-stat-card">
+        <div class="go-stat-value new" id="goStatNew">0</div>
+        <div class="go-stat-label">New</div>
+      </div>
+      <div class="go-stat-card">
+        <div class="go-stat-value accepted" id="goStatAccepted">0</div>
+        <div class="go-stat-label">Accepted</div>
+      </div>
+      <div class="go-stat-card">
+        <div class="go-stat-value progress" id="goStatProgress">0</div>
+        <div class="go-stat-label">In Progress</div>
+      </div>
+      <div class="go-stat-card">
+        <div class="go-stat-value done" id="goStatDone">0</div>
+        <div class="go-stat-label">Completed</div>
+      </div>
+    </div>
+
+    <!-- Section Title -->
+    <div class="go-section-header">
+      <div class="go-section-title">
+        <span class="go-live-dot"></span>
+        Incoming Requests
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadGarageRequests()">🔄 Refresh</button>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="go-filter-tabs" id="goFilterTabs">
+      <button class="go-filter-tab active" data-filter="all" onclick="filterRequests('all')">All</button>
+      <button class="go-filter-tab" data-filter="pending" onclick="filterRequests('pending')">⏳ New</button>
+      <button class="go-filter-tab" data-filter="accepted" onclick="filterRequests('accepted')">✅ Accepted</button>
+      <button class="go-filter-tab" data-filter="in_progress" onclick="filterRequests('in_progress')">🔧 In Progress</button>
+      <button class="go-filter-tab" data-filter="completed" onclick="filterRequests('completed')">✔️ Completed</button>
+      <button class="go-filter-tab" data-filter="rejected" onclick="filterRequests('rejected')">❌ Rejected</button>
+    </div>
+
+    <!-- Request List -->
+    <div id="goRequestList" class="stagger-children">
+      <!-- Populated by JS -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="goEmptyState" class="go-empty-state hidden">
+      <div class="go-empty-icon">📭</div>
+      <div class="go-empty-title">No Requests Found</div>
+      <p class="go-empty-text">Incoming service requests will appear here.</p>
+    </div>
+  </div>
+
+  <!-- Floating Emergency Button (Car Owner only) -->
+  <button class="fab-emergency car-owner-only" id="fabEmergency" onclick="window.location.href='booking.html?emergency=true'">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  </button>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav" id="bottomNav">
+    <a href="dashboard.html" class="nav-item active">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </a>
+    <a href="map.html" class="nav-item" id="bottomNavMap">
+      <span class="nav-icon">🗺️</span>
+      <span class="nav-label">Map</span>
+    </a>
+    <a href="ai-diagnosis.html" class="nav-item car-owner-only" id="bottomNavAI">
+      <span class="nav-icon">🤖</span>
+      <span class="nav-label">AI</span>
+    </a>
+    <a href="history.html" class="nav-item" id="bottomNavHistory">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">History</span>
+    </a>
+    <a href="profile.html" class="nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    /* ═══════════════════════════════════════════
+       ROLE DETECTION & DASHBOARD ROUTING
+       ═══════════════════════════════════════════ */
+
+    // Garage Owner state
+    let garageRequests = [];
+    let currentFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await requireAuth();
+
+      if (user) {
+        const role = localStorage.getItem('vrs_user_role') || 'car_owner';
+        const displayName = user.user_metadata?.full_name || 'User';
+        const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+
+        if (role === 'garage_owner') {
+          // ── GARAGE OWNER MODE ──
+          initGarageOwnerDashboard(displayName, avatar);
+        } else {
+          // ── CAR OWNER MODE (default — unchanged) ──
+          initCarOwnerDashboard(user, displayName, avatar);
+        }
+      }
+    });
+
+    /* ═══════════════════════════════════════════
+       CAR OWNER DASHBOARD (unchanged logic)
+       ═══════════════════════════════════════════ */
+
+    function initCarOwnerDashboard(user, displayName, avatar) {
+      document.getElementById('carOwnerDashboard').classList.remove('hidden');
+      document.getElementById('garageOwnerDashboard').classList.add('hidden');
+
+      document.getElementById('userName').textContent = displayName;
+      if (avatar) {
+        document.getElementById('userAvatar').src = avatar;
+        const deskAvatar = document.getElementById('desktopAvatar');
+        deskAvatar.src = avatar;
+        deskAvatar.classList.remove('hidden');
+      }
+      loadDashboardData(user.id);
+    }
+
+    async function loadDashboardData(userId) {
+      try {
+        const res = await fetch(`/api/bookings/user/${userId}`);
+        const data = await res.json();
+        
+        const activeSection = document.getElementById('activeRequestSection');
+        const recentActivity = document.getElementById('recentActivity');
+        const emptyActivity = document.getElementById('emptyActivity');
+
+        if (data.success && data.bookings.length > 0) {
+          // Check for active booking
+          const activeStates = ['pending', 'accepted', 'on_way', 'arrived'];
+          const activeBooking = data.bookings.find(b => activeStates.includes(b.status));
+          
+          if (activeBooking) {
+            activeSection.classList.remove('hidden');
+            document.getElementById('requestStatus').textContent = activeBooking.status.replace('_', ' ').toUpperCase();
+            document.getElementById('activeMechanicName').textContent = activeBooking.mechanic_name || 'Finding Mechanic...';
+            document.getElementById('activeMechanicSpecialty').textContent = activeBooking.service_name || activeBooking.issue_description || 'General Service';
+            
+            // Fix track link and chat link
+            const trackBtn = activeSection.querySelector('a[href="tracking.html"]');
+            if (trackBtn) trackBtn.href = `map.html?booking=${activeBooking.id}`;
+            const chatBtn = activeSection.querySelector('a[href="chat.html"]');
+            if (chatBtn) chatBtn.href = `chat.html?booking=${activeBooking.id}`;
+          } else {
+            activeSection.classList.add('hidden');
+          }
+          
+          // Render recent activity (up to 3 completed/cancelled)
+          const historyBookings = data.bookings.filter(b => b.status === 'completed' || b.status === 'cancelled').slice(0, 3);
+          
+          if (historyBookings.length > 0) {
+            recentActivity.classList.remove('hidden');
+            emptyActivity.classList.add('hidden');
+            recentActivity.innerHTML = historyBookings.map(item => `
+              <div class="history-card mb-md">
+                <div class="history-header">
+                  <span class="badge badge-${item.status}">${item.status}</span>
+                  <span class="history-date">${new Date(item.created_at).toLocaleDateString()}</span>
+                </div>
+                <div class="history-body">
+                  <div class="history-issue">${item.issue_description || item.service_name || 'Service Request'}</div>
+                  <div class="history-mechanic">🔧 ${item.mechanic_name || 'Pending'}</div>
+                </div>
+                <div class="history-footer">
+                  <span class="history-cost">${item.total_price ? '₹'+item.total_price : '—'}</span>
+                </div>
+              </div>
+            `).join('');
+          } else {
+            recentActivity.classList.add('hidden');
+            emptyActivity.classList.remove('hidden');
+          }
+        } else {
+          activeSection.classList.add('hidden');
+          recentActivity.classList.add('hidden');
+          emptyActivity.classList.remove('hidden');
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard:', err);
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       GARAGE OWNER DASHBOARD
+       ═══════════════════════════════════════════ */
+
+    function initGarageOwnerDashboard(displayName, avatar) {
+      // Show garage owner UI, hide car owner UI
+      document.getElementById('carOwnerDashboard').classList.add('hidden');
+      document.getElementById('garageOwnerDashboard').classList.remove('hidden');
+
+      // Hide car-owner-specific elements
+      document.getElementById('fabEmergency').style.display = 'none';
+
+      // Set user info
+      document.getElementById('goUserName').textContent = displayName;
+      if (avatar) {
+        document.getElementById('goUserAvatar').src = avatar;
+        const deskAvatar = document.getElementById('desktopAvatar');
+        deskAvatar.src = avatar;
+        deskAvatar.classList.remove('hidden');
+      }
+
+      // Load requests
+      loadGarageRequests();
+    }
+
+    /**
+     * Fetch incoming service requests from API
+     */
+    async function loadGarageRequests() {
+      const listEl = document.getElementById('goRequestList');
+      const emptyEl = document.getElementById('goEmptyState');
+
+      // Show loading state
+      listEl.innerHTML = `
+        <div style="text-align:center; padding: var(--space-xl);">
+          <div class="spinner spinner-lg"></div>
+          <p class="text-muted" style="margin-top:var(--space-md); font-size:var(--fs-sm);">Loading requests...</p>
+        </div>
+      `;
+
+      try {
+        const res = await fetch('/api/bookings/all');
+        const data = await res.json();
+
+        if (data.success && data.bookings.length > 0) {
+          garageRequests = data.bookings;
+          updateStats();
+          renderGarageRequests();
+          emptyEl.classList.add('hidden');
+        } else {
+          garageRequests = [];
+          listEl.innerHTML = '';
+          emptyEl.classList.remove('hidden');
+          updateStats();
+        }
+      } catch (err) {
+        console.error('Failed to load garage requests:', err);
+        // Fallback to dummy data
+        garageRequests = getDummyGarageRequests();
+        updateStats();
+        renderGarageRequests();
+        emptyEl.classList.add('hidden');
+      }
+    }
+
+    /**
+     * Fallback dummy data for garage owner
+     */
+    function getDummyGarageRequests() {
+      return [
+        { id: 'REQ-01', user_name: 'Arun M.', service_name: 'Engine Diagnosis', status: 'pending', issue_description: 'Engine overheating, producing white smoke from hood', vehicle_type: 'car', latitude: 18.5204, longitude: 73.8567, created_at: new Date(Date.now() - 300000).toISOString(), is_emergency: true },
+        { id: 'REQ-02', user_name: 'Priya K.', service_name: 'Flat Tire Repair', status: 'pending', issue_description: 'Flat tire near highway exit, need urgent replacement', vehicle_type: 'car', latitude: 18.5280, longitude: 73.8650, created_at: new Date(Date.now() - 900000).toISOString(), is_emergency: false },
+        { id: 'REQ-03', user_name: 'Sameer J.', service_name: 'Battery Jump Start', status: 'pending', issue_description: 'Battery completely dead, car won\'t start in parking lot', vehicle_type: 'car', latitude: 18.5150, longitude: 73.8480, created_at: new Date(Date.now() - 1800000).toISOString(), is_emergency: false },
+        { id: 'REQ-04', user_name: 'Neha R.', service_name: 'Brake Pad Replacement', status: 'accepted', issue_description: 'Brakes making grinding noise, need immediate inspection', vehicle_type: 'car', latitude: 18.5320, longitude: 73.8720, created_at: new Date(Date.now() - 3600000).toISOString(), is_emergency: true },
+        { id: 'REQ-05', user_name: 'Vikram S.', service_name: 'AC Gas Refill', status: 'in_progress', issue_description: 'AC not cooling, needs gas refill', vehicle_type: 'car', latitude: 18.5100, longitude: 73.8600, created_at: new Date(Date.now() - 7200000).toISOString(), is_emergency: false },
+        { id: 'REQ-06', user_name: 'Ravi T.', service_name: 'Towing Service', status: 'completed', issue_description: 'Vehicle breakdown, needed towing to nearest workshop', vehicle_type: 'bike', latitude: 18.5350, longitude: 73.8500, created_at: new Date(Date.now() - 86400000).toISOString(), is_emergency: false }
+      ];
+    }
+
+    /**
+     * Update stat cards
+     */
+    function updateStats() {
+      const newCount = garageRequests.filter(r => r.status === 'pending').length;
+      const acceptedCount = garageRequests.filter(r => r.status === 'accepted').length;
+      const inProgressCount = garageRequests.filter(r => r.status === 'in_progress').length;
+      const completedCount = garageRequests.filter(r => r.status === 'completed').length;
+
+      document.getElementById('goStatNew').textContent = newCount;
+      document.getElementById('goStatAccepted').textContent = acceptedCount;
+      document.getElementById('goStatProgress').textContent = inProgressCount;
+      document.getElementById('goStatDone').textContent = completedCount;
+    }
+
+    /**
+     * Filter requests by status
+     */
+    function filterRequests(filter) {
+      currentFilter = filter;
+
+      // Update active tab
+      document.querySelectorAll('.go-filter-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.filter === filter);
+      });
+
+      renderGarageRequests();
+    }
+
+    /**
+     * Render the request cards
+     */
+    function renderGarageRequests() {
+      const listEl = document.getElementById('goRequestList');
+      const emptyEl = document.getElementById('goEmptyState');
+
+      // Apply filter
+      const filtered = currentFilter === 'all'
+        ? garageRequests
+        : garageRequests.filter(r => r.status === currentFilter);
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+
+      listEl.innerHTML = filtered.map(req => {
+        const userName = req.user_name || req.user_id || 'Unknown User';
+        const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        const issue = req.issue_description || req.service_name || 'Service Request';
+        const service = req.service_name || 'General Service';
+        const time = timeAgo(req.created_at);
+        const location = `${parseFloat(req.latitude || 18.52).toFixed(4)}°N, ${parseFloat(req.longitude || 73.85).toFixed(4)}°E`;
+        const vehicle = req.vehicle_type === 'bike' ? '🏍️ Bike' : '🚗 Car';
+
+        // Status badge
+        let statusBadge = '';
+        switch (req.status) {
+          case 'pending':
+            statusBadge = '<span class="badge badge-pending">⏳ New</span>';
+            break;
+          case 'accepted':
+            statusBadge = '<span class="badge badge-completed">✅ Accepted</span>';
+            break;
+          case 'rejected':
+            statusBadge = '<span class="badge badge-cancelled">❌ Rejected</span>';
+            break;
+          case 'in_progress':
+            statusBadge = '<span class="badge badge-active">🔧 In Progress</span>';
+            break;
+          case 'completed':
+            statusBadge = '<span class="badge badge-completed">✔️ Completed</span>';
+            break;
+          default:
+            statusBadge = `<span class="badge">${req.status}</span>`;
+        }
+
+        // Emergency tag
+        const emergencyTag = req.is_emergency
+          ? '<span class="go-request-emergency">🚨 EMERGENCY</span>'
+          : '';
+
+        // Action buttons or status message
+        let actionHTML = '';
+        if (req.status === 'pending') {
+          actionHTML = `
+            <div class="go-action-buttons">
+              <button class="go-btn-accept" onclick="handleAccept('${req.id}')">✅ Accept Request</button>
+              <button class="go-btn-reject" onclick="handleReject('${req.id}')">❌ Reject</button>
+            </div>
+          `;
+        } else if (req.status === 'accepted') {
+          actionHTML = `<div class="go-status-message accepted">✅ Request accepted — Job assigned to you</div>`;
+        } else if (req.status === 'rejected') {
+          actionHTML = `<div class="go-status-message rejected">❌ Request rejected — Passed to next garage</div>`;
+        } else if (req.status === 'in_progress') {
+          actionHTML = `<div class="go-status-message in_progress">🔧 Work in progress</div>`;
+        } else if (req.status === 'completed') {
+          actionHTML = `<div class="go-status-message completed">✔️ Service completed</div>`;
+        }
+
+        return `
+          <div class="go-request-card status-${req.status} animate-slideUp" id="req-card-${req.id}">
+            <div class="go-request-header">
+              <div class="go-request-user">
+                <div class="go-request-avatar">${initials}</div>
+                <div>
+                  <div class="go-request-name">${userName} ${emergencyTag}</div>
+                  <div class="go-request-time">🕐 ${time}</div>
+                </div>
+              </div>
+              ${statusBadge}
+            </div>
+            <div class="go-request-body">
+              <div class="go-request-detail">
+                <span class="go-request-detail-icon">⚠️</span>
+                <span class="go-request-detail-text go-request-issue">${issue}</span>
+              </div>
+              <div class="go-request-detail">
+                <span class="go-request-detail-icon">🔧</span>
+                <span class="go-request-detail-text">${service}</span>
+              </div>
+              <div class="go-request-detail">
+                <span class="go-request-detail-icon">${req.vehicle_type === 'bike' ? '🏍️' : '🚗'}</span>
+                <span class="go-request-detail-text">${vehicle}</span>
+              </div>
+              <div class="go-request-detail">
+                <span class="go-request-detail-icon">📍</span>
+                <span class="go-request-detail-text">${location}</span>
+              </div>
+            </div>
+            ${actionHTML}
+          </div>
+        `;
+      }).join('');
+    }
+
+    /**
+     * Handle Accept action
+     */
+    async function handleAccept(requestId) {
+      await updateRequestStatus(requestId, 'accepted');
+    }
+
+    /**
+     * Handle Reject action
+     */
+    async function handleReject(requestId) {
+      await updateRequestStatus(requestId, 'rejected');
+    }
+
+    /**
+     * Update request status via API
+     */
+    async function updateRequestStatus(requestId, newStatus) {
+      // Optimistically update the UI
+      const request = garageRequests.find(r => r.id === requestId);
+      if (!request) return;
+
+      const oldStatus = request.status;
+      request.status = newStatus;
+      updateStats();
+      renderGarageRequests();
+
+      const statusLabels = {
+        accepted: 'Accepted',
+        rejected: 'Rejected',
+        in_progress: 'In Progress',
+        completed: 'Completed'
+      };
+
+      try {
+        const res = await fetch(`/api/bookings/${requestId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          showToast(`Request ${statusLabels[newStatus] || newStatus} successfully!`, newStatus === 'rejected' ? 'warning' : 'success');
+        } else {
+          throw new Error(data.error || 'Update failed');
+        }
+      } catch (err) {
+        console.error('Status update error:', err);
+        // Revert on error
+        request.status = oldStatus;
+        updateStats();
+        renderGarageRequests();
+        showToast('Failed to update request. Please try again.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

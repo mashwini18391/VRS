@@ -1,0 +1,136 @@
+/* ═══════════════════════════════════════════════════
+   VRS Responsive — Mobile-First Breakpoints
+   ═══════════════════════════════════════════════════ */
+
+/* ── Small phones (< 380px) ── */
+@media (max-width: 379px) {
+  :root {
+    --fs-3xl: 1.75rem;
+    --fs-2xl: 1.5rem;
+    --fs-display: 2.25rem;
+  }
+
+  .page-container {
+    padding: var(--space-sm);
+  }
+
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
+  }
+
+  .btn-emergency {
+    min-height: 52px;
+    font-size: var(--fs-base);
+  }
+}
+
+/* ── Tablets (≥ 768px) ── */
+@media (min-width: 768px) {
+  .page-container {
+    max-width: 680px;
+    padding: var(--space-xl);
+  }
+
+  .quick-actions-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .mechanics-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+  }
+
+  .chat-container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .history-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+  }
+
+  .auth-container {
+    max-width: 420px;
+    margin: 0 auto;
+  }
+}
+
+/* ── Desktop (≥ 1024px) ── */
+@media (min-width: 1024px) {
+  .page-container {
+    max-width: 960px;
+    padding: var(--space-2xl);
+  }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+  }
+
+  .quick-actions-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .mechanics-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .map-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 0;
+    height: calc(100vh - 60px);
+  }
+
+  .map-sidebar {
+    display: block;
+    overflow-y: auto;
+    border-left: 1px solid var(--border-subtle);
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .desktop-nav {
+    display: flex !important;
+  }
+
+  .fab-emergency {
+    right: 2rem;
+    bottom: 2rem;
+  }
+}
+
+/* ── Large Desktop (≥ 1440px) ── */
+@media (min-width: 1440px) {
+  .page-container {
+    max-width: 1200px;
+  }
+}
+
+/* ── Touch Target (mobile) ── */
+@media (hover: none) and (pointer: coarse) {
+  .btn, .btn-primary, .btn-emergency, .btn-outline,
+  .nav-item, .mechanic-card, .action-card {
+    min-height: 48px;
+  }
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .fab-emergency {
+    animation: none;
+  }
+}
