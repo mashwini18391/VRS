@@ -83,12 +83,24 @@ app.get('/api/health', (req, res) => {
 });
 
 // -- Specific Page Routes --
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'dashboard.html'));
+const pages = [
+  'dashboard', 'history', 'map', 'profile', 'booking',
+  'chat', 'ai-diagnosis', 'admin', 'role'
+];
+
+pages.forEach(page => {
+  app.get(`/${page}`, (req, res) => {
+    res.sendFile(path.join(__dirname, '..', `${page}.html`));
+  });
 });
 
-// -- Catch-all (serve frontend) --
+// -- Catch-all: serve index.html only for root or unknown routes --
 app.get('*', (req, res) => {
+  // If the request looks like a file (has extension), let it 404 naturally
+  if (path.extname(req.path)) {
+    return res.status(404).send('Not found');
+  }
+  // Otherwise serve the landing page
   res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 

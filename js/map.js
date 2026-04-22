@@ -1,312 +1,602 @@
 /* ═══════════════════════════════════════════════════
-   VRS Map — Leaflet + GPS + Trust Indicators
+   VRS Map — Google Maps + Uber-Style Flow
    ═══════════════════════════════════════════════════ */
 
 let map = null;
 let userMarker = null;
-let mechanicMarkers = [];
-let userLat = 18.5204; // Default: Pune, India
+let mechanicGMarkers = [];
+let directionsService = null;
+let directionsRenderer = null;
+let userLat = 18.5204;
 let userLng = 73.8567;
 let mechanicsWithDistance = [];
 let filteredMechanics = [];
+let selectedMechanic = null;
+let currentState = 'browse'; // browse | selected | searching | tracking | arrived
+let trackingInterval = null;
+let animatedMechMarker = null;
+let routePath = [];
+let routeStepIndex = 0;
+let googleMapsReady = false;
 
-/**
- * Initialize the map
- */
+// ── Garage Owner state ──
+let goCurrentRequest = null;
+let goRouteRenderer = null;
+
+/* ═══════════════════════════════════════════
+   GOOGLE MAPS READY CALLBACK (if used)
+   ═══════════════════════════════════════════ */
+
+function onGoogleMapsReady() {
+  googleMapsReady = true;
+  if (!map) initMap();
+}
+
+/* ═══════════════════════════════════════════
+   INIT MAP
+   ═══════════════════════════════════════════ */
+
 function initMap() {
-  // Create map centered on default location
-  map = L.map('map', {
-    zoomControl: false,
-    attributionControl: false
-  }).setView([userLat, userLng], 14);
+  if (!window.google || !window.google.maps) {
+    // Google Maps not loaded yet, poll every 200ms
+    setTimeout(initMap, 200);
+    return;
+  }
 
-  // Add zoom control to top-right
-  L.control.zoom({ position: 'topright' }).addTo(map);
+  const darkStyle = [
+    { elementType: 'geometry', stylers: [{ color: '#0a0a14' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#0a0a14' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#6b6b7b' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1a1a28' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#22222f' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#252535' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#070712' }] },
+    { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  ];
 
-  // Dark tile layer
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
-  }).addTo(map);
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: userLat, lng: userLng },
+    zoom: 15,
+    styles: darkStyle,
+    disableDefaultUI: true,
+    zoomControl: true,
+    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
+    gestureHandling: 'greedy'
+  });
 
-  // Grab the search input
+  directionsService = new google.maps.DirectionsService();
+  directionsRenderer = new google.maps.DirectionsRenderer({
+    map: map,
+    suppressMarkers: true,
+    polylineOptions: {
+      strokeColor: '#ff2d55',
+      strokeWeight: 5,
+      strokeOpacity: 0.8
+    }
+  });
+
+  // Search input
   const searchInput = document.getElementById('mapSearchInput');
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
-      const searchTerm = e.target.value.toLowerCase();
-      filteredMechanics = mechanicsWithDistance.filter(m => 
-        m.name.toLowerCase().includes(searchTerm) || 
-        m.specialization.toLowerCase().includes(searchTerm)
+      const q = e.target.value.toLowerCase();
+      filteredMechanics = mechanicsWithDistance.filter(m =>
+        m.name.toLowerCase().includes(q) || m.specialization.toLowerCase().includes(q)
       );
       renderMechanicsOnMap();
       renderMechanicsList();
     });
   }
 
-  // Get user location (GPS only — no manual input)
   getUserLocation();
 }
 
-/**
- * Get user's GPS location — GPS ONLY, no manual input allowed
- */
+/* ═══════════════════════════════════════════
+   GET USER LOCATION (GPS)
+   ═══════════════════════════════════════════ */
+
 function getUserLocation() {
   if (!navigator.geolocation) {
-    showToast('Geolocation is not supported by your browser', 'warning');
+    showToast('Geolocation not supported', 'warning');
+    placeUserMarker();
     loadNearbyMechanics();
     return;
   }
 
-  showToast('Detecting your location via GPS...', 'info');
-
   navigator.geolocation.getCurrentPosition(
-    (position) => {
-      userLat = position.coords.latitude;
-      userLng = position.coords.longitude;
-
-      // Add user marker
-      addUserMarker(userLat, userLng);
-
-      // Center map
-      map.setView([userLat, userLng], 15);
-
-      // Load nearby mechanics
+    (pos) => {
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
+      map.setCenter({ lat: userLat, lng: userLng });
+      placeUserMarker();
       loadNearbyMechanics();
-
-      showToast('Location detected via GPS!', 'success');
+      showToast('Location detected!', 'success');
     },
-    (error) => {
-      console.warn('Geolocation error:', error);
-      showToast('GPS unavailable. Using default location. Enable GPS for accuracy.', 'warning');
-
-      // Use default location
-      addUserMarker(userLat, userLng);
+    () => {
+      showToast('GPS unavailable — using default location.', 'warning');
+      placeUserMarker();
       loadNearbyMechanics();
     },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 300000
-    }
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
   );
 }
 
-/**
- * Add user marker to map
- */
-function addUserMarker(lat, lng) {
-  if (userMarker) {
-    map.removeLayer(userMarker);
-  }
+function placeUserMarker() {
+  if (userMarker) userMarker.setMap(null);
 
-  const userIcon = L.divIcon({
-    className: 'user-marker-wrapper',
-    html: '<div class="user-marker"></div>',
-    iconSize: [20, 20],
-    iconAnchor: [10, 10]
+  userMarker = new google.maps.Marker({
+    position: { lat: userLat, lng: userLng },
+    map: map,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      fillColor: '#3b82f6',
+      fillOpacity: 1,
+      strokeColor: '#ffffff',
+      strokeWeight: 3,
+      scale: 10
+    },
+    title: 'Your Location',
+    zIndex: 100
   });
 
-  userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(map);
-  userMarker.bindPopup('<strong>📍 Your Location</strong><br><span style="font-size:11px;color:#a1a1aa;">Via GPS</span>');
+  // Pulsing circle around user
+  new google.maps.Circle({
+    map: map,
+    center: { lat: userLat, lng: userLng },
+    radius: 100,
+    fillColor: '#3b82f6',
+    fillOpacity: 0.08,
+    strokeColor: '#3b82f6',
+    strokeOpacity: 0.3,
+    strokeWeight: 1,
+    clickable: false
+  });
 }
 
-/**
- * Load nearby mechanics and show on map
- * Only shows VERIFIED mechanics
- */
+function recenterMap() {
+  if (map) {
+    map.setCenter({ lat: userLat, lng: userLng });
+    map.setZoom(15);
+    showToast('Map recentered', 'info');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   LOAD NEARBY MECHANICS
+   ═══════════════════════════════════════════ */
+
 async function loadNearbyMechanics() {
   const role = localStorage.getItem('vrs_user_role') || 'car_owner';
   if (role === 'garage_owner') {
     return loadCustomerRequests();
   }
 
-  // Clear existing markers
-  mechanicMarkers.forEach(m => map.removeLayer(m));
-  mechanicMarkers = [];
+  clearMechanicMarkers();
 
   try {
     const res = await fetch(`/api/mechanics/nearby?lat=${userLat}&lng=${userLng}`);
     const data = await res.json();
-
     if (data.success && data.mechanics && data.mechanics.length > 0) {
       mechanicsWithDistance = data.mechanics;
-      filteredMechanics = [...mechanicsWithDistance];
     } else {
-      throw new Error("No mechanics returned");
+      throw new Error('No mechanics');
     }
-  } catch (err) {
-    console.warn('Fallback to dummy mechanics:', err.message || err);
-    mechanicsWithDistance = DUMMY_MECHANICS.map((m, index) => {
-      // Offset to ensure they appear near the current user location
-      const latOffset = (index % 2 === 0 ? 1 : -1) * (0.005 + index * 0.002);
-      const lngOffset = (index % 3 === 0 ? 1 : -1) * (0.005 + index * 0.001);
-      const newLat = userLat + latOffset;
-      const newLng = userLng + lngOffset;
-      const dist = haversineDistance(userLat, userLng, newLat, newLng);
-      return {
-        ...m,
-        latitude: newLat,
-        longitude: newLng,
-        distance: dist,
-        eta: estimateETA(dist)
-      };
+  } catch {
+    // Fallback to dummy mechanics near user
+    mechanicsWithDistance = DUMMY_MECHANICS.map((m, i) => {
+      const latOff = (i % 2 === 0 ? 1 : -1) * (0.005 + i * 0.002);
+      const lngOff = (i % 3 === 0 ? 1 : -1) * (0.005 + i * 0.001);
+      const lat = userLat + latOff;
+      const lng = userLng + lngOff;
+      const dist = haversineDistance(userLat, userLng, lat, lng);
+      return { ...m, latitude: lat, longitude: lng, distance: dist, eta: estimateETA(dist) };
     }).sort((a, b) => a.distance - b.distance);
-    filteredMechanics = [...mechanicsWithDistance];
   }
 
+  filteredMechanics = [...mechanicsWithDistance];
   renderMechanicsOnMap();
   renderMechanicsList();
 }
 
-/**
- * Render mechanics on the map
- */
-function renderMechanicsOnMap() {
-  // Clear existing markers
-  mechanicMarkers.forEach(m => map.removeLayer(m));
-  mechanicMarkers = [];
-
-  // Add mechanic markers with verified badges
-  filteredMechanics.forEach(mechanic => {
-    const mechanicIcon = L.divIcon({
-      className: 'mechanic-marker-wrapper',
-      html: `<div class="mechanic-marker">🔧</div>`,
-      iconSize: [36, 36],
-      iconAnchor: [18, 18]
-    });
-
-    const marker = L.marker([mechanic.latitude, mechanic.longitude], {
-      icon: mechanicIcon
-    }).addTo(map);
-
-    const trustLevel = getTrustLevel(mechanic.trust_score);
-    const stars = '⭐'.repeat(Math.round(mechanic.rating));
-    marker.bindPopup(`
-      <div style="min-width:200px;">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-          <strong style="font-size:14px;">${mechanic.name}</strong>
-          <span style="background:#22c55e;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;">✓ Verified</span>
-        </div>
-        <span style="color:#a1a1aa;font-size:12px;">${mechanic.specialization}</span><br>
-        <span style="font-size:12px;">📞 ${mechanic.phone || 'N/A'}</span><br>
-        <span style="font-size:12px;">${stars} ${mechanic.rating} (${mechanic.total_reviews} reviews)</span><br>
-        <div style="display:flex;align-items:center;gap:4px;margin:4px 0;">
-          <span style="font-size:11px;color:${trustLevel === 'high' ? '#22c55e' : trustLevel === 'medium' ? '#f59e0b' : '#ef4444'};">🛡️ Trust: ${mechanic.trust_score}/10</span>
-          <span style="font-size:11px;color:#a1a1aa;">· 🔧 ${mechanic.completed_bookings} jobs</span>
-        </div>
-        <span style="color:#007aff;font-size:13px;font-weight:600;">${formatDistance(mechanic.distance)} · ${mechanic.eta} min</span><br>
-        <a href="booking.html?mechanic=${mechanic.id}" style="display:inline-block;margin-top:8px;padding:6px 12px;background:#ff2d55;color:#fff;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">Book Now</a>
-      </div>
-    `);
-
-    mechanicMarkers.push(marker);
-  });
-
-  // Update count
-  const countEl = document.getElementById('mechanicCount');
-  if (countEl) countEl.textContent = filteredMechanics.length;
+function clearMechanicMarkers() {
+  mechanicGMarkers.forEach(m => m.setMap(null));
+  mechanicGMarkers = [];
 }
 
-/**
- * Render mechanics list in bottom sheet — with trust indicators
- */
+/* ═══════════════════════════════════════════
+   RENDER MECHANICS ON MAP
+   ═══════════════════════════════════════════ */
+
+function renderMechanicsOnMap() {
+  clearMechanicMarkers();
+
+  filteredMechanics.forEach(mech => {
+    const marker = new google.maps.Marker({
+      position: { lat: mech.latitude, lng: mech.longitude },
+      map: map,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+            <rect x="2" y="2" width="36" height="36" rx="10" fill="#1a1a28" stroke="#ff2d55" stroke-width="2"/>
+            <text x="20" y="26" text-anchor="middle" font-size="18">🔧</text>
+          </svg>
+        `),
+        scaledSize: new google.maps.Size(40, 40),
+        anchor: new google.maps.Point(20, 20)
+      },
+      title: mech.name,
+      zIndex: 10
+    });
+
+    marker.addListener('click', () => selectMechanic(mech.id));
+    mechanicGMarkers.push(marker);
+  });
+
+  document.getElementById('mechCount').textContent = filteredMechanics.length;
+}
+
+/* ═══════════════════════════════════════════
+   RENDER MECHANICS LIST (Bottom Sheet)
+   ═══════════════════════════════════════════ */
+
 function renderMechanicsList() {
-  const container = document.getElementById('mechanicsList');
+  const container = document.getElementById('mechList');
   if (!container) return;
 
   if (filteredMechanics.length === 0) {
-    container.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted);">No mechanics found.</div>`;
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:#6b6b7b;">No mechanics found nearby.</div>';
     return;
   }
 
   container.innerHTML = filteredMechanics.map(m => `
-    <div class="mechanic-card mb-md" onclick="window.location.href='booking.html?mechanic=${m.id}'">
-      <div class="mechanic-avatar">${m.name.charAt(0)}</div>
-      <div class="mechanic-info">
-        <div class="mechanic-name">
+    <div class="mech-list-item" onclick="selectMechanic(${m.id})" id="mechItem-${m.id}">
+      <div class="mech-avatar">${m.name.charAt(0)}</div>
+      <div class="mech-details">
+        <div class="mech-name">
           ${m.name}
-          ${m.verified ? '<span class="verified-badge">✅ Verified</span>' : '<span class="unverified-badge">⚠️</span>'}
+          ${m.verified ? '<span style="color:#2ed573;font-size:11px;">✓</span>' : ''}
         </div>
-        <div class="mechanic-specialty">${m.specialization} &bull; 📞 ${m.phone || 'N/A'}</div>
-        <div class="mechanic-meta">
-          <span class="mechanic-rating">⭐ ${m.rating} (${m.total_reviews})</span>
-          <span class="mechanic-distance">📍 ${formatDistance(m.distance)}</span>
-        </div>
-        <div class="mechanic-trust-meta">
-          ${renderTrustScore(m.trust_score)}
-          ${renderCompletedJobs(m.completed_bookings)}
+        <div class="mech-spec">${m.specialization}</div>
+        <div class="mech-meta">
+          <span>⭐ ${m.rating}</span>
+          <span>📍 ${formatDistance(m.distance)}</span>
+          <span>🛡️ ${m.trust_score}</span>
         </div>
       </div>
-      <div class="mechanic-eta">
-        <div class="mechanic-eta-value">${m.eta}</div>
-        <div class="mechanic-eta-label">min</div>
+      <div class="mech-eta-box">
+        <div class="mech-eta-val">${m.eta}</div>
+        <div class="mech-eta-lbl">min</div>
       </div>
     </div>
   `).join('');
 }
 
-/**
- * Toggle bottom sheet
- */
-function toggleSheet() {
-  const sheet = document.getElementById('mechanicsSheet');
-  if (sheet) {
-    sheet.classList.toggle('collapsed');
-  }
+/* ═══════════════════════════════════════════
+   CAR OWNER FLOW — SELECT MECHANIC
+   ═══════════════════════════════════════════ */
+
+function selectMechanic(id) {
+  selectedMechanic = mechanicsWithDistance.find(m => m.id === id);
+  if (!selectedMechanic) return;
+
+  // Pan map
+  map.panTo({ lat: selectedMechanic.latitude, lng: selectedMechanic.longitude });
+  map.setZoom(16);
+
+  // Fill detail card
+  document.getElementById('selAvatar').textContent = selectedMechanic.name.charAt(0);
+  document.getElementById('selName').textContent = selectedMechanic.name;
+  document.getElementById('selSpec').textContent = selectedMechanic.specialization;
+  document.getElementById('selVerified').textContent = selectedMechanic.verified ? '✓ Verified' : '⚠️ Unverified';
+  document.getElementById('selVerified').className = 'detail-badge ' + (selectedMechanic.verified ? 'green' : 'yellow');
+  document.getElementById('selPhone').textContent = '📞 ' + (selectedMechanic.phone || 'N/A');
+  document.getElementById('selRating').textContent = '⭐ ' + selectedMechanic.rating;
+  document.getElementById('selDist').textContent = formatDistance(selectedMechanic.distance);
+  document.getElementById('selEta').textContent = selectedMechanic.eta;
+
+  setState('selected');
 }
 
-/**
- * Recenter map to user location
- */
-function recenterMap() {
-  if (map) {
-    map.setView([userLat, userLng], 15);
-    showToast('Map recentered', 'info');
-  }
+function backToBrowse() {
+  selectedMechanic = null;
+  directionsRenderer.setDirections({ routes: [] });
+  map.setCenter({ lat: userLat, lng: userLng });
+  map.setZoom(15);
+  setState('browse');
 }
 
-/**
- * Load customer requests for garage owner
- */
-async function loadCustomerRequests() {
-  // Clear existing markers
-  mechanicMarkers.forEach(m => map.removeLayer(m));
-  mechanicMarkers = [];
-  
-  // Dummy data for customer requests
-  const customerRequests = [
-    { id: 'REQ-01', user_name: 'Arun M.', service: 'Engine Diagnosis', latitude: userLat + 0.005, longitude: userLng + 0.005, distance: 1.2 },
-    { id: 'REQ-02', user_name: 'Priya K.', service: 'Flat Tire Repair', latitude: userLat - 0.008, longitude: userLng - 0.002, distance: 2.1 }
-  ];
+/* ═══════════════════════════════════════════
+   CAR OWNER FLOW — REQUEST SERVICE
+   ═══════════════════════════════════════════ */
 
-  // Render on Map
-  customerRequests.forEach(req => {
-    const icon = L.divIcon({
-      className: 'mechanic-marker-wrapper',
-      html: `<div class="mechanic-marker" style="border-color:#ff2d55;">🚨</div>`,
-      iconSize: [36, 36],
-      iconAnchor: [18, 18]
-    });
-    const marker = L.marker([req.latitude, req.longitude], { icon }).addTo(map);
-    marker.bindPopup(`<strong>🚨 ${req.user_name}</strong><br/>${req.service}<br/>${req.distance} km away`);
-    mechanicMarkers.push(marker);
+function requestService() {
+  if (!selectedMechanic) return;
+
+  document.getElementById('searchMechName').textContent = selectedMechanic.name;
+  setState('searching');
+
+  // Simulate mechanic accepting after 3-5 seconds
+  setTimeout(() => {
+    if (currentState !== 'searching') return; // cancelled
+    showToast(`${selectedMechanic.name} accepted your request!`, 'success');
+    startTracking();
+  }, 3000 + Math.random() * 2000);
+}
+
+/* ═══════════════════════════════════════════
+   CAR OWNER FLOW — LIVE TRACKING
+   ═══════════════════════════════════════════ */
+
+function startTracking() {
+  // Fill tracking card
+  document.getElementById('trackAvatar').textContent = selectedMechanic.name.charAt(0);
+  document.getElementById('trackName').textContent = selectedMechanic.name;
+  document.getElementById('trackSpec').textContent = selectedMechanic.specialization;
+  document.getElementById('trackPhone').textContent = '📞 ' + (selectedMechanic.phone || 'N/A');
+
+  setState('tracking');
+  document.getElementById('trackStatus').textContent = 'Mechanic En Route 🚗';
+
+  // Draw route from mechanic to user
+  const origin = { lat: selectedMechanic.latitude, lng: selectedMechanic.longitude };
+  const destination = { lat: userLat, lng: userLng };
+
+  directionsService.route({
+    origin: origin,
+    destination: destination,
+    travelMode: google.maps.TravelMode.DRIVING
+  }, (result, status) => {
+    if (status === 'OK') {
+      directionsRenderer.setDirections(result);
+
+      const leg = result.routes[0].legs[0];
+      document.getElementById('trackDist').textContent = leg.distance.text;
+      document.getElementById('trackEta').textContent = leg.duration.text;
+      document.getElementById('trackEtaBadge').textContent = leg.duration.text;
+
+      // Fit map to route bounds
+      map.fitBounds(result.routes[0].bounds);
+
+      // Extract path for animation
+      routePath = [];
+      result.routes[0].overview_path.forEach(p => {
+        routePath.push({ lat: p.lat(), lng: p.lng() });
+      });
+
+      // Start animated mechanic marker
+      routeStepIndex = 0;
+      placeAnimatedMechMarker(routePath[0]);
+      beginAnimation();
+    } else {
+      // Fallback: straight line animation
+      showToast('Route unavailable — simulating path.', 'warning');
+      document.getElementById('trackDist').textContent = formatDistance(selectedMechanic.distance);
+      document.getElementById('trackEta').textContent = selectedMechanic.eta + ' min';
+      document.getElementById('trackEtaBadge').textContent = selectedMechanic.eta + ' min';
+
+      routePath = interpolatePoints(origin, destination, 30);
+      routeStepIndex = 0;
+      placeAnimatedMechMarker(routePath[0]);
+      beginAnimation();
+    }
+  });
+}
+
+function placeAnimatedMechMarker(pos) {
+  if (animatedMechMarker) animatedMechMarker.setMap(null);
+
+  animatedMechMarker = new google.maps.Marker({
+    position: pos,
+    map: map,
+    icon: {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r="20" fill="#ff2d55" stroke="#fff" stroke-width="3"/>
+          <text x="22" y="28" text-anchor="middle" font-size="18" fill="#fff">🚗</text>
+        </svg>
+      `),
+      scaledSize: new google.maps.Size(44, 44),
+      anchor: new google.maps.Point(22, 22)
+    },
+    zIndex: 200
+  });
+}
+
+function beginAnimation() {
+  if (trackingInterval) clearInterval(trackingInterval);
+
+  trackingInterval = setInterval(() => {
+    routeStepIndex++;
+
+    if (routeStepIndex >= routePath.length) {
+      // Arrived!
+      clearInterval(trackingInterval);
+      trackingInterval = null;
+      mechanicArrived();
+      return;
+    }
+
+    const pos = routePath[routeStepIndex];
+    if (animatedMechMarker) {
+      animatedMechMarker.setPosition(pos);
+    }
+
+    // Update remaining distance / ETA
+    const remaining = routePath.length - routeStepIndex;
+    const progress = Math.round((routeStepIndex / routePath.length) * 100);
+    const etaMin = Math.max(1, Math.round((remaining / routePath.length) * selectedMechanic.eta));
+    document.getElementById('trackEta').textContent = etaMin + ' min';
+    document.getElementById('trackEtaBadge').textContent = etaMin + ' min';
+
+  }, 1500); // move every 1.5 seconds
+}
+
+function mechanicArrived() {
+  setState('arrived');
+  document.getElementById('arrivedOverlay').style.display = 'flex';
+  document.getElementById('arrivedTitle').textContent = selectedMechanic.name + ' Has Arrived!';
+  showToast('Your mechanic has arrived! 🎉', 'success');
+}
+
+function closeArrived() {
+  document.getElementById('arrivedOverlay').style.display = 'none';
+  cancelRequest();
+}
+
+/* ═══════════════════════════════════════════
+   CANCEL REQUEST
+   ═══════════════════════════════════════════ */
+
+function cancelRequest() {
+  if (trackingInterval) { clearInterval(trackingInterval); trackingInterval = null; }
+  if (animatedMechMarker) { animatedMechMarker.setMap(null); animatedMechMarker = null; }
+  directionsRenderer.setDirections({ routes: [] });
+  routePath = [];
+  routeStepIndex = 0;
+  selectedMechanic = null;
+  map.setCenter({ lat: userLat, lng: userLng });
+  map.setZoom(15);
+  setState('browse');
+  showToast('Request cancelled.', 'info');
+}
+
+/* ═══════════════════════════════════════════
+   STATE MANAGEMENT
+   ═══════════════════════════════════════════ */
+
+function setState(state) {
+  currentState = state;
+  const states = ['stateBrowse', 'stateSelected', 'stateSearching', 'stateTracking'];
+  states.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
   });
 
-  const countEl = document.getElementById('customerCount');
-  if (countEl) countEl.textContent = customerRequests.length;
-  
-  const listEl = document.getElementById('customerRequestsList');
-  if (listEl) {
-    listEl.innerHTML = customerRequests.map(req => `
-      <div class="mechanic-card mb-md">
-        <div class="mechanic-avatar" style="background:#ffe5e5;color:#ff2d55;">🚨</div>
-        <div class="mechanic-info">
-          <div class="mechanic-name">${req.user_name}</div>
-          <div class="mechanic-specialty">${req.service}</div>
-        </div>
-        <div class="mechanic-eta">
-          <div class="mechanic-eta-value" style="color:var(--text-primary);font-size:var(--fs-base);">${req.distance} km</div>
-        </div>
-      </div>
-    `).join('');
+  switch(state) {
+    case 'browse':    document.getElementById('stateBrowse').style.display = 'block'; break;
+    case 'selected':  document.getElementById('stateSelected').style.display = 'block'; break;
+    case 'searching': document.getElementById('stateSearching').style.display = 'block'; break;
+    case 'tracking':  document.getElementById('stateTracking').style.display = 'block'; break;
   }
+}
+
+/* ═══════════════════════════════════════════
+   GARAGE OWNER FLOW
+   ═══════════════════════════════════════════ */
+
+async function loadCustomerRequests() {
+  // Dummy customer requests near the garage
+  const requests = [
+    { id: 'REQ-01', user_name: 'Arun M.', service: 'Engine Diagnosis', latitude: userLat + 0.008, longitude: userLng + 0.005, distance: 1.2, is_emergency: true },
+    { id: 'REQ-02', user_name: 'Priya K.', service: 'Flat Tire Repair', latitude: userLat - 0.006, longitude: userLng - 0.003, distance: 2.1, is_emergency: false },
+    { id: 'REQ-03', user_name: 'Sameer J.', service: 'Battery Jump Start', latitude: userLat + 0.003, longitude: userLng - 0.007, distance: 0.8, is_emergency: false },
+  ];
+
+  if (requests.length === 0) {
+    document.getElementById('goStateIncoming').style.display = 'none';
+    document.getElementById('goStateEmpty').style.display = 'block';
+    return;
+  }
+
+  goCurrentRequest = requests[0];
+  showIncomingRequest(goCurrentRequest);
+
+  // Show all request markers on map
+  requests.forEach(req => {
+    const marker = new google.maps.Marker({
+      position: { lat: req.latitude, lng: req.longitude },
+      map: map,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+            <rect x="2" y="2" width="36" height="36" rx="10" fill="#1a1a28" stroke="#ff2d55" stroke-width="2"/>
+            <text x="20" y="26" text-anchor="middle" font-size="18">🚨</text>
+          </svg>
+        `),
+        scaledSize: new google.maps.Size(40, 40),
+        anchor: new google.maps.Point(20, 20)
+      },
+      title: req.user_name,
+      zIndex: 10
+    });
+    mechanicGMarkers.push(marker);
+  });
+}
+
+function showIncomingRequest(req) {
+  document.getElementById('goCustomerName').textContent = req.user_name;
+  document.getElementById('goCustomerService').textContent = (req.is_emergency ? '🚨 EMERGENCY · ' : '') + req.service;
+  document.getElementById('goCustomerDist').textContent = req.distance + ' km away';
+  document.getElementById('goStateIncoming').style.display = 'block';
+  document.getElementById('goStateNavigating').style.display = 'none';
+  document.getElementById('goStateEmpty').style.display = 'none';
+}
+
+function acceptRequest() {
+  if (!goCurrentRequest) return;
+
+  showToast('Request accepted! Navigating to customer...', 'success');
+  document.getElementById('goNavName').textContent = goCurrentRequest.user_name;
+  document.getElementById('goNavService').textContent = goCurrentRequest.service;
+
+  document.getElementById('goStateIncoming').style.display = 'none';
+  document.getElementById('goStateNavigating').style.display = 'block';
+
+  // Draw route to customer
+  if (goRouteRenderer) goRouteRenderer.setMap(null);
+  goRouteRenderer = new google.maps.DirectionsRenderer({
+    map: map,
+    suppressMarkers: true,
+    polylineOptions: { strokeColor: '#2ed573', strokeWeight: 5, strokeOpacity: 0.8 }
+  });
+
+  directionsService.route({
+    origin: { lat: userLat, lng: userLng },
+    destination: { lat: goCurrentRequest.latitude, lng: goCurrentRequest.longitude },
+    travelMode: google.maps.TravelMode.DRIVING
+  }, (result, status) => {
+    if (status === 'OK') {
+      goRouteRenderer.setDirections(result);
+      const leg = result.routes[0].legs[0];
+      document.getElementById('goNavDist').textContent = leg.distance.text;
+      document.getElementById('goNavEtaVal').textContent = leg.duration.text;
+      document.getElementById('goNavEta').textContent = leg.duration.text;
+      map.fitBounds(result.routes[0].bounds);
+    } else {
+      document.getElementById('goNavDist').textContent = goCurrentRequest.distance + ' km';
+      document.getElementById('goNavEtaVal').textContent = estimateETA(goCurrentRequest.distance) + ' min';
+      document.getElementById('goNavEta').textContent = estimateETA(goCurrentRequest.distance) + ' min';
+    }
+  });
+}
+
+function rejectRequest() {
+  showToast('Request rejected.', 'info');
+  goCurrentRequest = null;
+  document.getElementById('goStateIncoming').style.display = 'none';
+  document.getElementById('goStateEmpty').style.display = 'block';
+}
+
+function finishNavigation() {
+  if (goRouteRenderer) goRouteRenderer.setMap(null);
+  document.getElementById('arrivedOverlay').style.display = 'flex';
+  document.getElementById('arrivedTitle').textContent = 'You Have Arrived!';
+  document.getElementById('arrivedText').textContent = 'You are at the customer location. Begin the repair service.';
+}
+
+/* ═══════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════ */
+
+function interpolatePoints(start, end, steps) {
+  const points = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    points.push({
+      lat: start.lat + (end.lat - start.lat) * t,
+      lng: start.lng + (end.lng - start.lng) * t
+    });
+  }
+  return points;
 }

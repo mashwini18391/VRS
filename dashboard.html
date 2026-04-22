@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/animations.css">
   <link rel="stylesheet" href="css/responsive.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <!-- Desktop Nav -->
@@ -94,6 +95,7 @@
       </div>
     </div>
 
+
     <!-- Recent Activity -->
     <div class="section">
       <div class="flex justify-between items-center mb-md">
@@ -108,6 +110,19 @@
         <div class="empty-state-title">No Activity Yet</div>
         <p class="empty-state-text">Your repair requests will appear here.</p>
         <a href="map.html" class="btn btn-primary">Find Nearby Mechanics</a>
+      </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="section">
+      <h2 class="section-title">Analytics</h2>
+      <div class="chart-grid stagger-children">
+        <div class="chart-card animate-scaleIn">
+          <canvas id="coBarChart"></canvas>
+        </div>
+        <div class="chart-card animate-scaleIn">
+          <canvas id="coPieChart"></canvas>
+        </div>
       </div>
     </div>
   </div>
@@ -149,6 +164,8 @@
       </div>
     </div>
 
+
+
     <!-- Section Title -->
     <div class="go-section-header">
       <div class="go-section-title">
@@ -178,6 +195,19 @@
       <div class="go-empty-icon">📭</div>
       <div class="go-empty-title">No Requests Found</div>
       <p class="go-empty-text">Incoming service requests will appear here.</p>
+    </div>
+
+    <!-- Analytics -->
+    <div class="section" style="margin-top: 32px;">
+      <h2 class="section-title">Analytics</h2>
+      <div class="chart-grid stagger-children">
+        <div class="chart-card animate-scaleIn">
+          <canvas id="goLineChart"></canvas>
+        </div>
+        <div class="chart-card animate-scaleIn">
+          <canvas id="goDoughnutChart"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -221,6 +251,25 @@
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
   <script>
+    /* ═══════════════════════════════════════════
+       CHART LOGIC & CONFIG
+       ═══════════════════════════════════════════ */
+    let coBarChartInstance = null;
+    let coPieChartInstance = null;
+    let goLineChartInstance = null;
+    let goDoughnutChartInstance = null;
+
+    if (window.Chart) {
+      Chart.defaults.color = '#e8e8ef';
+      Chart.defaults.font.family = "'Inter', sans-serif";
+      Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.05)';
+      Chart.defaults.plugins.tooltip.backgroundColor = '#1a1a24';
+      Chart.defaults.plugins.tooltip.titleColor = '#ffffff';
+      Chart.defaults.plugins.tooltip.bodyColor = '#e8e8ef';
+      Chart.defaults.plugins.tooltip.borderColor = '#2a2a35';
+      Chart.defaults.plugins.tooltip.borderWidth = 1;
+    }
+
     /* ═══════════════════════════════════════════
        ROLE DETECTION & DASHBOARD ROUTING
        ═══════════════════════════════════════════ */
@@ -294,6 +343,11 @@
             activeSection.classList.add('hidden');
           }
           
+          // Render Car Owner Charts
+          if (window.Chart) {
+            renderCarOwnerCharts(data.bookings);
+          }
+
           // Render recent activity (up to 3 completed/cancelled)
           const historyBookings = data.bookings.filter(b => b.status === 'completed' || b.status === 'cancelled').slice(0, 3);
           
@@ -420,6 +474,150 @@
       document.getElementById('goStatAccepted').textContent = acceptedCount;
       document.getElementById('goStatProgress').textContent = inProgressCount;
       document.getElementById('goStatDone').textContent = completedCount;
+
+      // Render Garage Owner Charts
+      if (window.Chart) {
+        renderGarageOwnerCharts(garageRequests);
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       CHART RENDERING FUNCTIONS
+       ═══════════════════════════════════════════ */
+
+    function renderCarOwnerCharts(bookings) {
+      // 1. Spending by Service (Bar Chart)
+      const serviceSpending = {};
+      bookings.filter(b => b.status === 'completed').forEach(b => {
+        const name = b.service_name || b.issue_description || 'General Service';
+        const shortName = name.length > 15 ? name.substring(0, 15) + '...' : name;
+        serviceSpending[shortName] = (serviceSpending[shortName] || 0) + (b.total_price || 0);
+      });
+      const barLabels = Object.keys(serviceSpending);
+      const barData = Object.values(serviceSpending);
+
+      if (coBarChartInstance) coBarChartInstance.destroy();
+      const ctxBar = document.getElementById('coBarChart').getContext('2d');
+      coBarChartInstance = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: barLabels.length ? barLabels : ['No Data'],
+          datasets: [{
+            label: 'Money Spent (₹)',
+            data: barData.length ? barData : [0],
+            backgroundColor: 'rgba(255, 71, 87, 0.8)',
+            borderColor: '#ff4757',
+            borderWidth: 1,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: 'Spending by Service', color: '#e8e8ef' }
+          }
+        }
+      });
+
+      // 2. Request Status (Pie Chart)
+      const statusCounts = { pending: 0, completed: 0, cancelled: 0 };
+      bookings.forEach(b => {
+        if (b.status === 'completed') statusCounts.completed++;
+        else if (b.status === 'cancelled') statusCounts.cancelled++;
+        else statusCounts.pending++;
+      });
+
+      if (coPieChartInstance) coPieChartInstance.destroy();
+      const ctxPie = document.getElementById('coPieChart').getContext('2d');
+      coPieChartInstance = new Chart(ctxPie, {
+        type: 'pie',
+        data: {
+          labels: ['Completed', 'Pending', 'Cancelled'],
+          datasets: [{
+            data: [statusCounts.completed, statusCounts.pending, statusCounts.cancelled],
+            backgroundColor: ['#2ed573', '#ffa502', '#ff4757'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#e8e8ef' } },
+            title: { display: true, text: 'Requests by Status', color: '#e8e8ef' }
+          }
+        }
+      });
+    }
+
+    function renderGarageOwnerCharts(requests) {
+      // 1. Earnings Trend (Line Chart)
+      const earningsByDate = {};
+      requests.filter(r => r.status === 'completed').forEach(r => {
+        const date = new Date(r.created_at).toLocaleDateString();
+        earningsByDate[date] = (earningsByDate[date] || 0) + (r.total_price || 0);
+      });
+      const sortedDates = Object.keys(earningsByDate).sort((a,b) => new Date(a) - new Date(b));
+      const lineData = sortedDates.map(date => earningsByDate[date]);
+
+      if (goLineChartInstance) goLineChartInstance.destroy();
+      const ctxLine = document.getElementById('goLineChart').getContext('2d');
+      goLineChartInstance = new Chart(ctxLine, {
+        type: 'line',
+        data: {
+          labels: sortedDates.length ? sortedDates : ['No Data'],
+          datasets: [{
+            label: 'Daily Earnings (₹)',
+            data: lineData.length ? lineData : [0],
+            borderColor: '#2ed573',
+            backgroundColor: 'rgba(46, 213, 115, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: 'Earnings Trend', color: '#e8e8ef' }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+
+      // 2. Job Distribution (Doughnut Chart)
+      const statusCounts = { pending: 0, accepted: 0, in_progress: 0, completed: 0, rejected: 0 };
+      requests.forEach(r => {
+        if (statusCounts[r.status] !== undefined) statusCounts[r.status]++;
+      });
+
+      if (goDoughnutChartInstance) goDoughnutChartInstance.destroy();
+      const ctxDoughnut = document.getElementById('goDoughnutChart').getContext('2d');
+      goDoughnutChartInstance = new Chart(ctxDoughnut, {
+        type: 'doughnut',
+        data: {
+          labels: ['Pending', 'Accepted', 'In Progress', 'Completed', 'Rejected'],
+          datasets: [{
+            data: [statusCounts.pending, statusCounts.accepted, statusCounts.in_progress, statusCounts.completed, statusCounts.rejected],
+            backgroundColor: ['#ffa502', '#3742fa', '#1e90ff', '#2ed573', '#ff4757'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#e8e8ef' } },
+            title: { display: true, text: 'Job Distribution', color: '#e8e8ef' }
+          }
+        }
+      });
     }
 
     /**

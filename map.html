@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="description" content="Find nearby mechanics on the map.">
+  <meta name="description" content="Find nearby mechanics on the map — Uber-style experience.">
   <meta name="theme-color" content="#06060b">
   <title>Find Mechanics — VRS</title>
   <link rel="stylesheet" href="css/variables.css">
@@ -12,141 +12,805 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/animations.css">
   <link rel="stylesheet" href="css/responsive.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
     body {
+      margin: 0;
+      padding: 0;
       overflow: hidden;
+      height: 100%;
+      font-family: 'Inter', sans-serif;
     }
 
-    .leaflet-container {
-      background: var(--bg-primary);
+    /* ── Full-screen Map ── */
+    #map {
+      width: 100%;
+      height: 100vh;
     }
 
-    .leaflet-popup-content-wrapper {
-      background: var(--bg-surface);
-      color: var(--text-primary);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg);
-      border: 1px solid var(--border-default);
+    /* ── Top Search Bar ── */
+    .map-top-bar {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    .leaflet-popup-tip {
-      background: var(--bg-surface);
-    }
-
-    .leaflet-popup-content {
-      margin: 12px 16px;
-      font-family: var(--font-family);
-    }
-
-    .leaflet-control-zoom a {
-      background: var(--bg-surface) !important;
-      color: var(--text-primary) !important;
-      border-color: var(--border-default) !important;
-    }
-
-    .user-marker {
-      width: 20px;
-      height: 20px;
-      background: var(--emergency-blue);
-      border: 3px solid #fff;
+    .map-back-btn {
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
-      box-shadow: 0 0 15px var(--emergency-blue-glow);
-      position: relative;
-    }
-
-    .user-marker::after {
-      content: '';
-      position: absolute;
-      inset: -8px;
-      border: 2px solid var(--emergency-blue);
-      border-radius: 50%;
-      animation: radarSweep 2s ease-out infinite;
-    }
-
-    .mechanic-marker {
-      width: 36px;
-      height: 36px;
-      background: var(--bg-surface);
-      border: 2px solid var(--emergency-red);
-      border-radius: var(--radius-md);
+      background: rgba(10, 10, 18, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 18px;
-      box-shadow: var(--shadow-md);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .map-search-bar {
+      flex: 1;
+      background: rgba(10, 10, 18, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .map-search-bar input {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #e8e8ef;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .map-search-bar input::placeholder {
+      color: #6b6b7b;
+    }
+
+    .map-recenter-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(10, 10, 18, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #3b82f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* ── Bottom Sheet ── */
+    .uber-sheet {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      background: rgba(10, 10, 18, 0.92);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 24px 24px 0 0;
+      padding: 0 20px 24px;
+      max-height: 55vh;
+      overflow-y: auto;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .uber-sheet.hidden {
+      transform: translateY(110%);
+    }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 99px;
+      margin: 12px auto 16px;
+    }
+
+    /* ── Mechanic List Card ── */
+    .mech-list-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px;
+      border-radius: 16px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+
+    .mech-list-item:hover,
+    .mech-list-item.selected {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 45, 85, 0.3);
+    }
+
+    .mech-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #ff2d55, #ff6b81);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .mech-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mech-name {
+      font-weight: 600;
+      color: #e8e8ef;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mech-spec {
+      color: #8b8b9b;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .mech-meta {
+      display: flex;
+      gap: 12px;
+      margin-top: 4px;
+      font-size: 11px;
+      color: #6b6b7b;
+    }
+
+    .mech-eta-box {
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .mech-eta-val {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ff2d55;
+    }
+
+    .mech-eta-lbl {
+      font-size: 10px;
+      color: #6b6b7b;
+      text-transform: uppercase;
+    }
+
+    /* ── Selected Mechanic Detail Card ── */
+    .detail-card {
+      padding: 4px 0;
+    }
+
+    .detail-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .detail-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #ff2d55, #ff6b81);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #fff;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .detail-info {
+      flex: 1;
+    }
+
+    .detail-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .detail-spec {
+      font-size: 13px;
+      color: #8b8b9b;
+      margin-top: 2px;
+    }
+
+    .detail-badges {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .detail-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .detail-badge.green {
+      color: #2ed573;
+    }
+
+    .detail-badge.blue {
+      color: #3b82f6;
+    }
+
+    .detail-badge.yellow {
+      color: #ffa502;
+    }
+
+    .detail-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .detail-stat {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .detail-stat-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .detail-stat-lbl {
+      font-size: 10px;
+      color: #6b6b7b;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .detail-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* ── Buttons ── */
+    .btn-uber {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .btn-uber.primary {
+      background: #ff2d55;
+      color: #fff;
+    }
+
+    .btn-uber.primary:hover {
+      background: #e6264c;
+    }
+
+    .btn-uber.secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: #e8e8ef;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-uber.secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-uber.accept {
+      background: #2ed573;
+      color: #000;
+    }
+
+    .btn-uber.reject {
+      background: rgba(255, 69, 58, 0.15);
+      color: #ff453a;
+      border: 1px solid rgba(255, 69, 58, 0.3);
+    }
+
+    .btn-uber.cancel {
+      background: rgba(255, 255, 255, 0.06);
+      color: #ff453a;
+    }
+
+    /* ── Searching State ── */
+    .searching-state {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .search-pulse {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      background: rgba(255, 45, 85, 0.15);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .search-pulse::before,
+    .search-pulse::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 45, 85, 0.4);
+      animation: searchPulse 2s ease-out infinite;
+    }
+
+    .search-pulse::after {
+      animation-delay: 1s;
+    }
+
+    .search-pulse-icon {
+      font-size: 32px;
+      z-index: 1;
+    }
+
+    @keyframes searchPulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(2.5);
+        opacity: 0;
+      }
+    }
+
+    .search-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .search-subtitle {
+      font-size: 13px;
+      color: #8b8b9b;
+      margin-bottom: 20px;
+    }
+
+    /* ── Tracking State ── */
+    .tracking-state {
+      padding: 4px 0;
+    }
+
+    .tracking-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      margin-bottom: 16px;
+    }
+
+    .tracking-status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #2ed573;
+      animation: statusBlink 1.5s infinite;
+    }
+
+    @keyframes statusBlink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    .tracking-status-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #2ed573;
+      flex: 1;
+    }
+
+    .tracking-eta-badge {
+      background: rgba(46, 213, 115, 0.1);
+      border: 1px solid rgba(46, 213, 115, 0.3);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #2ed573;
+    }
+
+    .tracking-mechanic {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .tracking-info {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .tracking-info-card {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .tracking-info-val {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .tracking-info-lbl {
+      font-size: 10px;
+      color: #6b6b7b;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── Garage Owner Incoming Request ── */
+    .go-request-card {
+      padding: 4px 0;
+    }
+
+    .go-request-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .go-request-badge {
+      background: rgba(255, 45, 85, 0.15);
+      color: #ff2d55;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      animation: statusBlink 1.5s infinite;
+    }
+
+    .go-request-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      flex: 1;
+    }
+
+    .go-customer {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      margin-bottom: 14px;
+    }
+
+    .go-customer-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .go-customer-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .go-customer-service {
+      font-size: 12px;
+      color: #8b8b9b;
+      margin-top: 2px;
+    }
+
+    .go-customer-dist {
+      font-size: 12px;
+      color: #ffa502;
+      margin-top: 4px;
+    }
+
+    .go-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* ── Arrived overlay ── */
+    .arrived-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .arrived-card {
+      background: rgba(10, 10, 18, 0.95);
+      border: 1px solid rgba(46, 213, 115, 0.3);
+      border-radius: 24px;
+      padding: 40px;
+      text-align: center;
+      max-width: 340px;
+    }
+
+    .arrived-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .arrived-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .arrived-text {
+      font-size: 14px;
+      color: #8b8b9b;
+      margin-bottom: 24px;
     }
   </style>
 </head>
 
 <body>
-  <div class="map-container">
-    <!-- Search Bar Overlay -->
-    <div class="map-overlay-top animate-slideDown car-owner-only">
-      <div class="map-search">
-        <span>🔍</span>
-        <input type="text" placeholder="Search location or mechanic..." id="mapSearchInput">
-        <button class="btn-icon btn-ghost" onclick="recenterMap()" title="My Location"
-          style="font-size:1.2rem;">📍</button>
+  <!-- Top Bar -->
+  <div class="map-top-bar" id="topBar">
+    <button class="map-back-btn" onclick="window.location.href='dashboard.html'">←</button>
+    <div class="map-search-bar car-owner-only">
+      <span>🔍</span>
+      <input type="text" placeholder="Search mechanics..." id="mapSearchInput">
+    </div>
+    <button class="map-recenter-btn" onclick="recenterMap()" title="My Location">📍</button>
+  </div>
+
+  <!-- Google Map -->
+  <div id="map"></div>
+
+  <!-- ═══ CAR OWNER: Bottom Sheet ═══ -->
+  <div class="uber-sheet car-owner-only" id="carOwnerSheet">
+    <div class="sheet-handle"></div>
+
+    <!-- State: Browse Mechanics -->
+    <div id="stateBrowse">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="font-size:16px;font-weight:700;color:#fff;">Nearby Mechanics (<span id="mechCount">0</span>)</span>
+        <span
+          style="font-size:11px;color:#6b6b7b;background:rgba(255,255,255,0.05);padding:4px 10px;border-radius:8px;">By
+          Distance</span>
+      </div>
+      <div id="mechList"><!-- JS populated --></div>
+    </div>
+
+    <!-- State: Selected Mechanic -->
+    <div id="stateSelected" class="detail-card" style="display:none;">
+      <div class="detail-top">
+        <div class="detail-avatar" id="selAvatar">R</div>
+        <div class="detail-info">
+          <div class="detail-name" id="selName">—</div>
+          <div class="detail-spec" id="selSpec">—</div>
+          <div class="detail-badges">
+            <span class="detail-badge green" id="selVerified">✓ Verified</span>
+            <span class="detail-badge blue" id="selPhone">📞 N/A</span>
+          </div>
+        </div>
+      </div>
+      <div class="detail-stats">
+        <div class="detail-stat">
+          <div class="detail-stat-val" id="selRating">—</div>
+          <div class="detail-stat-lbl">Rating</div>
+        </div>
+        <div class="detail-stat">
+          <div class="detail-stat-val" id="selDist">—</div>
+          <div class="detail-stat-lbl">Distance</div>
+        </div>
+        <div class="detail-stat">
+          <div class="detail-stat-val" id="selEta">—</div>
+          <div class="detail-stat-lbl">ETA (min)</div>
+        </div>
+      </div>
+      <div class="detail-actions">
+        <button class="btn-uber secondary" onclick="backToBrowse()">← Back</button>
+        <button class="btn-uber primary" onclick="requestService()">🚀 Request Service</button>
       </div>
     </div>
 
-    <!-- Map -->
-    <div id="map"></div>
-
-    <!-- Bottom Sheet (Car Owner) -->
-    <div class="map-bottom-sheet car-owner-only" id="mechanicsSheet">
-      <div class="sheet-header" onclick="toggleSheet()">
-        <div>
-          <div class="modal-handle" style="margin:0 0 8px 0;"></div>
-          <span class="sheet-title">Nearby Mechanics (<span id="mechanicCount">0</span>)</span>
-        </div>
-        <span class="badge badge-active" id="sortBadge">By Distance</span>
-      </div>
-      <div class="sheet-body" id="mechanicsList">
-        <!-- Populated by JS -->
-      </div>
+    <!-- State: Searching -->
+    <div id="stateSearching" class="searching-state" style="display:none;">
+      <div class="search-pulse"><span class="search-pulse-icon">🔍</span></div>
+      <div class="search-title">Finding your mechanic...</div>
+      <div class="search-subtitle">Sending request to <span id="searchMechName">—</span></div>
+      <button class="btn-uber cancel" onclick="cancelRequest()">Cancel Request</button>
     </div>
 
-    <!-- Bottom Sheet (Garage Owner) -->
-    <div class="map-bottom-sheet garage-only" id="customerRequestsSheet">
-      <div class="sheet-header">
-        <div>
-          <div class="modal-handle" style="margin:0 0 8px 0;"></div>
-          <span class="sheet-title">Nearby Customer Requests (<span id="customerCount">0</span>)</span>
+    <!-- State: Tracking (Accepted / En Route) -->
+    <div id="stateTracking" class="tracking-state" style="display:none;">
+      <div class="tracking-header">
+        <div class="tracking-status-dot"></div>
+        <div class="tracking-status-text" id="trackStatus">Mechanic Accepted!</div>
+        <div class="tracking-eta-badge" id="trackEtaBadge">— min</div>
+      </div>
+      <div class="tracking-mechanic">
+        <div class="detail-avatar" id="trackAvatar" style="width:48px;height:48px;font-size:18px;">R</div>
+        <div style="flex:1;">
+          <div style="font-weight:600;color:#fff;font-size:14px;" id="trackName">—</div>
+          <div style="font-size:12px;color:#8b8b9b;" id="trackSpec">—</div>
         </div>
-        <span class="badge badge-emergency">Live Updates</span>
+        <div style="text-align:right;">
+          <div style="font-size:12px;color:#6b6b7b;" id="trackPhone">📞 N/A</div>
+        </div>
       </div>
-      <div class="sheet-body" id="customerRequestsList" style="padding: 16px; text-align: center; color: var(--text-muted);">
-        No nearby customer requests found.
+      <div class="tracking-info">
+        <div class="tracking-info-card">
+          <div class="tracking-info-val" id="trackDist">—</div>
+          <div class="tracking-info-lbl">Distance</div>
+        </div>
+        <div class="tracking-info-card">
+          <div class="tracking-info-val" id="trackEta">—</div>
+          <div class="tracking-info-lbl">ETA</div>
+        </div>
+        <div class="tracking-info-card">
+          <div class="tracking-info-val" id="trackSpeed">30</div>
+          <div class="tracking-info-lbl">km/h</div>
+        </div>
       </div>
+      <button class="btn-uber cancel" onclick="cancelRequest()">✕ Cancel Request</button>
     </div>
   </div>
 
-  <!-- Floating Emergency Button -->
-  <button class="fab-emergency car-owner-only" onclick="window.location.href='booking.html?emergency=true'" style="bottom:20px;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-      stroke-linejoin="round">
-      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-      <line x1="12" y1="9" x2="12" y2="13" />
-      <line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  </button>
+  <!-- ═══ GARAGE OWNER: Bottom Sheet ═══ -->
+  <div class="uber-sheet garage-only" id="garageOwnerSheet">
+    <div class="sheet-handle"></div>
+
+    <!-- Incoming Request -->
+    <div id="goStateIncoming" class="go-request-card">
+      <div class="go-request-header">
+        <span class="go-request-badge">● INCOMING</span>
+        <span class="go-request-title">Service Request</span>
+      </div>
+      <div class="go-customer" id="goCustomerCard">
+        <div class="go-customer-avatar">🚨</div>
+        <div style="flex:1;">
+          <div class="go-customer-name" id="goCustomerName">—</div>
+          <div class="go-customer-service" id="goCustomerService">—</div>
+          <div class="go-customer-dist" id="goCustomerDist">— km away</div>
+        </div>
+      </div>
+      <div class="go-actions">
+        <button class="btn-uber reject" onclick="rejectRequest()">✕ Reject</button>
+        <button class="btn-uber accept" onclick="acceptRequest()">✓ Accept</button>
+      </div>
+    </div>
+
+    <!-- Navigating to Customer -->
+    <div id="goStateNavigating" class="tracking-state" style="display:none;">
+      <div class="tracking-header">
+        <div class="tracking-status-dot"></div>
+        <div class="tracking-status-text">Navigating to Customer</div>
+        <div class="tracking-eta-badge" id="goNavEta">— min</div>
+      </div>
+      <div class="tracking-mechanic">
+        <div class="go-customer-avatar" style="width:48px;height:48px;">🚨</div>
+        <div style="flex:1;">
+          <div style="font-weight:600;color:#fff;font-size:14px;" id="goNavName">—</div>
+          <div style="font-size:12px;color:#8b8b9b;" id="goNavService">—</div>
+        </div>
+      </div>
+      <div class="tracking-info">
+        <div class="tracking-info-card">
+          <div class="tracking-info-val" id="goNavDist">—</div>
+          <div class="tracking-info-lbl">Distance</div>
+        </div>
+        <div class="tracking-info-card">
+          <div class="tracking-info-val" id="goNavEtaVal">—</div>
+          <div class="tracking-info-lbl">ETA</div>
+        </div>
+      </div>
+      <button class="btn-uber secondary" onclick="finishNavigation()">✓ Mark Arrived</button>
+    </div>
+
+    <!-- No requests state -->
+    <div id="goStateEmpty" style="display:none;text-align:center;padding:30px 0;color:#6b6b7b;">
+      <div style="font-size:48px;margin-bottom:12px;">📭</div>
+      <div style="font-size:16px;font-weight:600;color:#8b8b9b;">No Incoming Requests</div>
+      <div style="font-size:13px;margin-top:4px;">Customer requests will appear here.</div>
+    </div>
+  </div>
+
+  <!-- Arrived Overlay -->
+  <div class="arrived-overlay" id="arrivedOverlay" style="display:none;">
+    <div class="arrived-card">
+      <div class="arrived-icon">✅</div>
+      <div class="arrived-title" id="arrivedTitle">Mechanic Has Arrived!</div>
+      <div class="arrived-text" id="arrivedText">Your mechanic is at your location and ready to help.</div>
+      <button class="btn-uber primary" onclick="closeArrived()" style="width:100%;">Done</button>
+    </div>
+  </div>
 
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="js/utils.js"></script>
   <script src="js/auth.js"></script>
-  <script src="js/map.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/map.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
       await requireAuth();
       initMap();
     });
+  </script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBMhClytAerwaRg-4hVvpXyXEwq-4yT29Q">
   </script>
 </body>
 

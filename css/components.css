@@ -2255,6 +2255,35 @@
 }
 
 /* ═══════════════════════════════════════════════════
+   CHARTS
+   ═══════════════════════════════════════════════════ */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 250px;
+  position: relative;
+}
+
+.chart-card canvas {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 250px;
+}
+
+/* ═══════════════════════════════════════════════════
    ROLE-BASED UI VISIBILITY
    ═══════════════════════════════════════════════════ */
 body[data-role="garage_owner"] .car-owner-only {
