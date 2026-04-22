@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // SET ROLE-BASED UI VISIBILITY
   const role = localStorage.getItem('vrs_user_role') || 'car_owner';
   document.body.setAttribute('data-role', role);
-
   initSupabase();
   highlightActiveNav();
   addRippleToButtons();

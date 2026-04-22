@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1350,6 +1351,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
       let redirecting = false;
 
+      // Listen for auth state changes (handles Google OAuth redirect)
       if (typeof onAuthStateChange === 'function') {
         onAuthStateChange((event, user) => {
           if (event === 'SIGNED_IN' && user && !redirecting) {
@@ -1364,14 +1366,12 @@
         });
       }
 
-      if (typeof getCurrentUser === 'function') {
-        const user = await getCurrentUser();
-        if (user && !redirecting) {
-          window.location.href = 'dashboard.html';
-        }
+      // Regular check for already logged in users
+      const user = await getCurrentUser();
+      if (user && !redirecting) {
+        window.location.href = 'dashboard.html';
       }
     });
   </script>
 </body>
-
 </html>
