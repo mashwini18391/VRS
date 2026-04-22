@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="VRS — Emergency vehicle repair assistance. Find nearby mechanics, request service, and track repairs in real-time.">
+  <meta name="description"
+    content="VRS — Emergency vehicle repair assistance. Find nearby mechanics, request service, and track repairs in real-time.">
   <meta name="theme-color" content="#0a0a12">
   <title>VRS — Emergency Vehicle Repair</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +14,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     /* ── Reset & Base ── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     :root {
       --bg: #0a0a12;
@@ -32,14 +40,16 @@
       --rose-soft: rgba(244, 63, 94, 0.12);
       --purple: #a855f7;
       --purple-soft: rgba(168, 85, 247, 0.12);
-      --border: rgba(255,255,255,0.06);
+      --border: rgba(255, 255, 255, 0.06);
       --radius: 16px;
       --radius-sm: 10px;
       --font: 'Inter', -apple-system, system-ui, sans-serif;
       --max-w: 1080px;
     }
 
-    html { scroll-behavior: smooth; }
+    html {
+      scroll-behavior: smooth;
+    }
 
     body {
       font-family: var(--font);
@@ -96,7 +106,9 @@
     /* ── Sticky Nav ── */
     .topnav {
       position: fixed;
-      top: 0; left: 0; right: 0;
+      top: 0;
+      left: 0;
+      right: 0;
       z-index: 100;
       background: rgba(10, 10, 18, 0.8);
       backdrop-filter: blur(16px);
@@ -143,7 +155,9 @@
       transition: color 0.2s;
     }
 
-    .topnav-links a:hover { color: var(--text); }
+    .topnav-links a:hover {
+      color: var(--text);
+    }
 
     .topnav-cta {
       background: var(--accent);
@@ -158,7 +172,9 @@
       text-decoration: none;
     }
 
-    .topnav-cta:hover { opacity: 0.85; }
+    .topnav-cta:hover {
+      opacity: 0.85;
+    }
 
     /* ── Hero ── */
     .hero {
@@ -293,10 +309,13 @@
 
     .hero-google-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(255,255,255,0.08);
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.08);
     }
 
-    .hero-google-btn svg { width: 20px; height: 20px; }
+    .hero-google-btn svg {
+      width: 20px;
+      height: 20px;
+    }
 
     .hero-or {
       color: var(--text-dim);
@@ -316,8 +335,15 @@
     }
 
     @keyframes gentle-bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(6px); }
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(6px);
+      }
     }
 
     /* ── Auth Panel (Step 2) ── */
@@ -334,8 +360,15 @@
     }
 
     @keyframes authFadeIn {
-      from { opacity: 0; transform: translateY(16px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .auth-role-badge {
@@ -462,11 +495,13 @@
 
     .change-role-btn:hover {
       color: var(--text);
-      background: rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.04);
     }
 
     /* Hide role step when auth is active */
-    .role-step.hidden { display: none; }
+    .role-step.hidden {
+      display: none;
+    }
 
     /* ── About ── */
     .about-grid {
@@ -476,7 +511,9 @@
       align-items: center;
     }
 
-    .about-text .section-desc { margin-bottom: 24px; }
+    .about-text .section-desc {
+      margin-bottom: 24px;
+    }
 
     .about-stats {
       display: grid;
@@ -497,10 +534,21 @@
       margin-bottom: 4px;
     }
 
-    .stat-value.blue { color: var(--accent); }
-    .stat-value.green { color: var(--green); }
-    .stat-value.orange { color: var(--orange); }
-    .stat-value.purple { color: var(--purple); }
+    .stat-value.blue {
+      color: var(--accent);
+    }
+
+    .stat-value.green {
+      color: var(--green);
+    }
+
+    .stat-value.orange {
+      color: var(--orange);
+    }
+
+    .stat-value.purple {
+      color: var(--purple);
+    }
 
     .stat-label {
       font-size: 0.8rem;
@@ -508,7 +556,9 @@
     }
 
     /* ── How It Works ── */
-    #how-it-works { background: var(--bg-card); }
+    #how-it-works {
+      background: var(--bg-card);
+    }
 
     .steps-grid {
       display: grid;
@@ -571,7 +621,9 @@
       transition: border-color 0.2s;
     }
 
-    .feature-card:hover { border-color: rgba(255,255,255,0.12); }
+    .feature-card:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
 
     .feature-icon-box {
       width: 44px;
@@ -584,10 +636,21 @@
       flex-shrink: 0;
     }
 
-    .feature-icon-box.rose { background: var(--rose-soft); }
-    .feature-icon-box.blue { background: var(--accent-soft); }
-    .feature-icon-box.purple { background: var(--purple-soft); }
-    .feature-icon-box.green { background: var(--green-soft); }
+    .feature-icon-box.rose {
+      background: var(--rose-soft);
+    }
+
+    .feature-icon-box.blue {
+      background: var(--accent-soft);
+    }
+
+    .feature-icon-box.purple {
+      background: var(--purple-soft);
+    }
+
+    .feature-icon-box.green {
+      background: var(--green-soft);
+    }
 
     .feature-title {
       font-weight: 700;
@@ -602,7 +665,9 @@
     }
 
     /* ── Garage Section ── */
-    #for-garages { background: var(--bg-card); }
+    #for-garages {
+      background: var(--bg-card);
+    }
 
     .garage-grid {
       display: grid;
@@ -682,7 +747,7 @@
     .btn-outline-lg {
       background: transparent;
       color: var(--text);
-      border: 1px solid rgba(255,255,255,0.15);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       padding: 14px 32px;
       border-radius: 10px;
       font-size: 0.95rem;
@@ -713,10 +778,14 @@
     .footer-brand {
       font-weight: 700;
       font-size: 0.95rem;
-      display: flex; align-items: center; gap: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    .footer-brand span { font-size: 1.1rem; }
+    .footer-brand span {
+      font-size: 1.1rem;
+    }
 
     .footer-links {
       display: flex;
@@ -731,7 +800,9 @@
       transition: color 0.2s;
     }
 
-    .footer-links a:hover { color: var(--text); }
+    .footer-links a:hover {
+      color: var(--text);
+    }
 
     .footer-copy {
       font-size: 0.78rem;
@@ -742,7 +813,7 @@
     .loading-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(10,10,18,0.9);
+      background: rgba(10, 10, 18, 0.9);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -751,17 +822,24 @@
       gap: 16px;
     }
 
-    .loading-overlay.hidden { display: none; }
+    .loading-overlay.hidden {
+      display: none;
+    }
 
     .loader {
-      width: 36px; height: 36px;
+      width: 36px;
+      height: 36px;
       border: 3px solid var(--border);
       border-top-color: var(--accent);
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
     }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
     .loading-text {
       color: var(--text-muted);
@@ -771,7 +849,8 @@
     /* ── Toast ── */
     .toast-container {
       position: fixed;
-      top: 80px; right: 24px;
+      top: 80px;
+      right: 24px;
       z-index: 200;
       display: flex;
       flex-direction: column;
@@ -803,18 +882,30 @@
 
     /* ── Responsive ── */
     @media (max-width: 768px) {
-      section { padding: 56px 0; }
+      section {
+        padding: 56px 0;
+      }
 
-      .topnav-links { display: none; }
-      .topnav-cta { display: none; }
-      .nav-toggle { display: block; }
+      .topnav-links {
+        display: none;
+      }
+
+      .topnav-cta {
+        display: none;
+      }
+
+      .nav-toggle {
+        display: block;
+      }
 
       .topnav-links.open {
         display: flex;
         flex-direction: column;
         position: absolute;
-        top: 60px; left: 0; right: 0;
-        background: rgba(10,10,18,0.97);
+        top: 60px;
+        left: 0;
+        right: 0;
+        background: rgba(10, 10, 18, 0.97);
         backdrop-filter: blur(16px);
         padding: 20px 24px;
         gap: 16px;
@@ -851,16 +942,21 @@
     }
 
     @media (max-width: 480px) {
-      .container { padding: 0 16px; }
+      .container {
+        padding: 0 16px;
+      }
 
       .steps-grid {
         grid-template-columns: 1fr;
       }
 
-      .hero h1 { font-size: 2rem; }
+      .hero h1 {
+        font-size: 2rem;
+      }
     }
   </style>
 </head>
+
 <body>
 
   <!-- ─── Sticky Top Nav ─── -->
@@ -887,7 +983,8 @@
         <div class="role-step" id="roleStep">
           <div class="hero-badge">⚡ Emergency Repair Platform</div>
           <h1>Welcome to <span class="gradient-text">VRS</span></h1>
-          <p class="hero-subtitle">Emergency vehicle repair assistance made easy. Find nearby mechanics, get instant help, and track repairs in real-time.</p>
+          <p class="hero-subtitle">Emergency vehicle repair assistance made easy. Find nearby mechanics, get instant
+            help, and track repairs in real-time.</p>
 
           <div class="role-cards">
             <a class="role-card" id="carOwnerCard" onclick="selectRole('car_owner')">
@@ -918,10 +1015,18 @@
             <!-- Google Login -->
             <button class="hero-google-btn" id="authGoogleBtn" onclick="handleGoogleLogin()">
               <svg viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 001 12c0 1.77.42 3.44 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                  fill="#4285F4" />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853" />
+                <path
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 001 12c0 1.77.42 3.44 1.18 4.93l3.66-2.84z"
+                  fill="#FBBC05" />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  fill="#EA4335" />
               </svg>
               Continue with Google
             </button>
@@ -935,7 +1040,8 @@
             </div>
             <div class="auth-field">
               <label for="authPassword">Password</label>
-              <input type="password" class="auth-input" id="authPassword" placeholder="••••••••" autocomplete="current-password">
+              <input type="password" class="auth-input" id="authPassword" placeholder="••••••••"
+                autocomplete="current-password">
             </div>
 
             <button class="auth-submit" id="authSubmitBtn" onclick="handleEmailLogin()">Sign In</button>
@@ -955,8 +1061,11 @@
         <div class="about-text reveal">
           <div class="section-label">About VRS</div>
           <h2 class="section-title">Roadside emergencies, solved instantly.</h2>
-          <p class="section-desc">VRS connects stranded vehicle owners with verified nearby mechanics in seconds. Whether it's a flat tire at midnight or an engine breakdown on the highway, help is just a tap away.</p>
-          <p class="section-desc" style="margin-top:12px;">Our platform uses real-time GPS tracking, AI-powered diagnostics, and a trust-based verification system to ensure fast, reliable, and safe roadside assistance.</p>
+          <p class="section-desc">VRS connects stranded vehicle owners with verified nearby mechanics in seconds.
+            Whether it's a flat tire at midnight or an engine breakdown on the highway, help is just a tap away.</p>
+          <p class="section-desc" style="margin-top:12px;">Our platform uses real-time GPS tracking, AI-powered
+            diagnostics, and a trust-based verification system to ensure fast, reliable, and safe roadside assistance.
+          </p>
         </div>
         <div class="about-stats reveal">
           <div class="stat-card">
@@ -1030,28 +1139,32 @@
           <div class="feature-icon-box rose">🚨</div>
           <div>
             <div class="feature-title">Emergency Request</div>
-            <div class="feature-desc">One-tap SOS button sends an urgent alert to all nearby mechanics with your exact location.</div>
+            <div class="feature-desc">One-tap SOS button sends an urgent alert to all nearby mechanics with your exact
+              location.</div>
           </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon-box blue">📡</div>
           <div>
             <div class="feature-title">Real-Time Tracking</div>
-            <div class="feature-desc">Track your assigned mechanic on a live map with accurate ETA and route updates.</div>
+            <div class="feature-desc">Track your assigned mechanic on a live map with accurate ETA and route updates.
+            </div>
           </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon-box purple">🤖</div>
           <div>
             <div class="feature-title">AI Diagnosis</div>
-            <div class="feature-desc">Describe symptoms or upload a photo — our AI suggests possible issues and urgency levels.</div>
+            <div class="feature-desc">Describe symptoms or upload a photo — our AI suggests possible issues and urgency
+              levels.</div>
           </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon-box green">📅</div>
           <div>
             <div class="feature-title">Smart Booking</div>
-            <div class="feature-desc">Book regular maintenance or emergency repairs with transparent pricing and reviews.</div>
+            <div class="feature-desc">Book regular maintenance or emergency repairs with transparent pricing and
+              reviews.</div>
           </div>
         </div>
       </div>
@@ -1064,13 +1177,15 @@
       <div class="section-header reveal">
         <div class="section-label">For Garage Owners</div>
         <h2 class="section-title">Grow your garage business</h2>
-        <p class="section-desc">A dedicated dashboard to manage incoming repair requests, track jobs, and build your reputation.</p>
+        <p class="section-desc">A dedicated dashboard to manage incoming repair requests, track jobs, and build your
+          reputation.</p>
       </div>
       <div class="garage-grid">
         <div class="garage-card reveal">
           <div class="garage-icon">📥</div>
           <div class="garage-title">Manage Requests</div>
-          <div class="garage-desc">View incoming service requests with customer details, issue description, and location.</div>
+          <div class="garage-desc">View incoming service requests with customer details, issue description, and
+            location.</div>
         </div>
         <div class="garage-card reveal">
           <div class="garage-icon">✅</div>
@@ -1080,7 +1195,8 @@
         <div class="garage-card reveal">
           <div class="garage-icon">📊</div>
           <div class="garage-title">Track Progress</div>
-          <div class="garage-desc">Monitor active repairs, mark completions, and view your service history and earnings.</div>
+          <div class="garage-desc">Monitor active repairs, mark completions, and view your service history and earnings.
+          </div>
         </div>
       </div>
     </div>
@@ -1257,4 +1373,5 @@
     });
   </script>
 </body>
+
 </html>
