@@ -66,7 +66,7 @@
           </div>
         </div>
         <div class="flex gap-sm">
-          <a href="tracking.html" class="btn btn-primary btn-sm flex-1">📍 Track</a>
+          <a href="map.html?tracking=true" class="btn btn-primary btn-sm flex-1">📍 Track Live</a>
           <a href="chat.html" class="btn btn-outline btn-sm flex-1">💬 Chat</a>
         </div>
       </div>
@@ -335,8 +335,8 @@
             document.getElementById('activeMechanicSpecialty').textContent = activeBooking.service_name || activeBooking.issue_description || 'General Service';
             
             // Fix track link and chat link
-            const trackBtn = activeSection.querySelector('a[href="tracking.html"]');
-            if (trackBtn) trackBtn.href = `map.html?booking=${activeBooking.id}`;
+            const trackBtn = activeSection.querySelector('a[href="map.html?tracking=true"]');
+            if (trackBtn) trackBtn.href = `map.html?tracking=true&booking=${activeBooking.id}`;
             const chatBtn = activeSection.querySelector('a[href="chat.html"]');
             if (chatBtn) chatBtn.href = `chat.html?booking=${activeBooking.id}`;
           } else {

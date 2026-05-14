@@ -1,82 +1,88 @@
 /* ═══════════════════════════════════════════════════
-   VRS Map — Google Maps + Uber-Style Flow
+   VRS Map — Google Maps JavaScript API
+   Interactive map with dark theme
    ═══════════════════════════════════════════════════ */
 
 let map = null;
 let userMarker = null;
+let userCircle = null;
 let mechanicGMarkers = [];
-let directionsService = null;
-let directionsRenderer = null;
-let userLat = 18.5204;
-let userLng = 73.8567;
+let routePolyline = null;
+let userLat = 11.9416;
+let userLng = 79.8083;
 let mechanicsWithDistance = [];
 let filteredMechanics = [];
 let selectedMechanic = null;
-let currentState = 'browse'; // browse | selected | searching | tracking | arrived
+let currentState = 'browse';
 let trackingInterval = null;
 let animatedMechMarker = null;
 let routePath = [];
 let routeStepIndex = 0;
-let googleMapsReady = false;
+let infoWindow = null;
+let directionsService = null;
 
-// ── Garage Owner state ──
+// Garage Owner state
 let goCurrentRequest = null;
-let goRouteRenderer = null;
+let goRoutePolyline = null;
 
 /* ═══════════════════════════════════════════
-   GOOGLE MAPS READY CALLBACK (if used)
+   DARK MAP STYLES
    ═══════════════════════════════════════════ */
+const DARK_MAP_STYLES = [
+  { elementType: "geometry", stylers: [{ color: "#1d1d2b" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8b8b9b" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1d1d2b" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#2a2a3d" }] },
+  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#8b8b9b" }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#6b6b7b" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#1a2e1a" }] },
+  { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#2a2a3d" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#6b6b7b" }] },
+  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#333347" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3d3d55" }] },
+  { featureType: "road.highway.controlled_access", elementType: "geometry", stylers: [{ color: "#4a4a66" }] },
+  { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#5b5b6b" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e1626" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#3d5c8c" }] },
+];
 
-function onGoogleMapsReady() {
-  googleMapsReady = true;
-  if (!map) initMap();
+/* ═══════════════════════════════════════════
+   SHEET TOGGLE
+   ═══════════════════════════════════════════ */
+function toggleSheet() {
+  const sheet = document.getElementById('carOwnerSheet');
+  if (sheet) sheet.classList.toggle('collapsed');
 }
 
 /* ═══════════════════════════════════════════
    INIT MAP
    ═══════════════════════════════════════════ */
-
 function initMap() {
-  if (!window.google || !window.google.maps) {
-    // Google Maps not loaded yet, poll every 200ms
-    setTimeout(initMap, 200);
-    return;
-  }
-
-  const darkStyle = [
-    { elementType: 'geometry', stylers: [{ color: '#0a0a14' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#0a0a14' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#6b6b7b' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1a1a28' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#22222f' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#252535' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#070712' }] },
-    { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-  ];
+  if (map) return;
 
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat: userLat, lng: userLng },
     zoom: 15,
-    styles: darkStyle,
+    styles: DARK_MAP_STYLES,
     disableDefaultUI: true,
     zoomControl: true,
-    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
-    gestureHandling: 'greedy'
+    zoomControlOptions: {
+      position: google.maps.ControlPosition.RIGHT_CENTER,
+    },
+    fullscreenControl: false,
+    gestureHandling: 'greedy',
+    minZoom: 3,
+    maxZoom: 20,
+    clickableIcons: false,
   });
 
   directionsService = new google.maps.DirectionsService();
-  directionsRenderer = new google.maps.DirectionsRenderer({
-    map: map,
-    suppressMarkers: true,
-    polylineOptions: {
-      strokeColor: '#ff2d55',
-      strokeWeight: 5,
-      strokeOpacity: 0.8
-    }
-  });
+  infoWindow = new google.maps.InfoWindow();
 
-  // Search input
+  // ── Custom Map Controls ──
+  addCustomControls();
+
   const searchInput = document.getElementById('mapSearchInput');
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -90,12 +96,101 @@ function initMap() {
   }
 
   getUserLocation();
+
+  // ── Auto-start tracking if redirected from booking ──
+  checkTrackingMode();
+}
+
+function checkTrackingMode() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('tracking') === 'true') {
+    const trackingRaw = localStorage.getItem('vrs_tracking_data');
+    if (trackingRaw) {
+      try {
+        const data = JSON.parse(trackingRaw);
+        // Wait for map to be ready, then start tracking
+        setTimeout(() => startTrackingFromBooking(data), 1500);
+      } catch (e) { console.error('Invalid tracking data', e); }
+    }
+  }
+}
+
+function startTrackingFromBooking(data) {
+  const mech = data.mechanic;
+  // Set selectedMechanic so tracking functions work
+  // parseFloat ensures coordinates are numbers (MySQL DECIMAL comes as strings)
+  selectedMechanic = {
+    id: mech.id,
+    name: mech.name,
+    specialization: mech.specialization,
+    phone: mech.phone,
+    rating: mech.rating,
+    latitude: parseFloat(mech.latitude) || userLat,
+    longitude: parseFloat(mech.longitude) || userLng,
+    eta: 5
+  };
+
+  // Hide browse sheet, show tracking
+  showToast(`${mech.name} is on the way! 🚗`, 'success');
+  startTracking();
 }
 
 /* ═══════════════════════════════════════════
-   GET USER LOCATION (GPS)
+   CUSTOM MAP CONTROLS
    ═══════════════════════════════════════════ */
+function addCustomControls() {
+  const controlDiv = document.createElement('div');
+  controlDiv.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-right:12px;margin-bottom:120px;';
 
+  // Fullscreen
+  const fsBtn = createControlButton('⛶', 'Toggle Fullscreen');
+  fsBtn.id = 'customFsBtn';
+  fsBtn.style.fontSize = '22px';
+  fsBtn.addEventListener('click', () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen();
+    }
+  });
+  controlDiv.appendChild(fsBtn);
+
+  // Update icon when fullscreen changes
+  document.addEventListener('fullscreenchange', () => {
+    fsBtn.textContent = document.fullscreenElement ? '⛶' : '⛶';
+    fsBtn.title = document.fullscreenElement ? 'Exit Fullscreen' : 'Toggle Fullscreen';
+  });
+
+  // My Location — re-centers map on user's GPS position
+  const locBtn = createControlButton('◎', 'My Location');
+  locBtn.style.fontSize = '18px';
+  locBtn.addEventListener('click', () => recenterMap());
+  controlDiv.appendChild(locBtn);
+
+  map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(controlDiv);
+}
+
+function createControlButton(text, title) {
+  const btn = document.createElement('button');
+  btn.textContent = text;
+  btn.title = title;
+  btn.style.cssText = `
+    width:40px;height:40px;border-radius:10px;
+    background:rgba(10,10,18,0.88);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,0.1);
+    color:#e8e8ef;font-size:20px;font-weight:600;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,0.4);transition:background 0.2s;
+    font-family:'Inter',sans-serif;line-height:1;
+  `;
+  btn.addEventListener('mouseenter', () => btn.style.background = 'rgba(30,30,48,0.95)');
+  btn.addEventListener('mouseleave', () => btn.style.background = 'rgba(10,10,18,0.88)');
+  return btn;
+}
+
+/* ═══════════════════════════════════════════
+   GET USER LOCATION
+   ═══════════════════════════════════════════ */
 function getUserLocation() {
   if (!navigator.geolocation) {
     showToast('Geolocation not supported', 'warning');
@@ -103,7 +198,6 @@ function getUserLocation() {
     loadNearbyMechanics();
     return;
   }
-
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       userLat = pos.coords.latitude;
@@ -124,33 +218,33 @@ function getUserLocation() {
 
 function placeUserMarker() {
   if (userMarker) userMarker.setMap(null);
+  if (userCircle) userCircle.setMap(null);
 
   userMarker = new google.maps.Marker({
     position: { lat: userLat, lng: userLng },
     map: map,
     icon: {
       path: google.maps.SymbolPath.CIRCLE,
+      scale: 10,
       fillColor: '#3b82f6',
       fillOpacity: 1,
       strokeColor: '#ffffff',
       strokeWeight: 3,
-      scale: 10
     },
+    zIndex: 1000,
     title: 'Your Location',
-    zIndex: 100
   });
 
-  // Pulsing circle around user
-  new google.maps.Circle({
-    map: map,
+  userCircle = new google.maps.Circle({
     center: { lat: userLat, lng: userLng },
     radius: 100,
     fillColor: '#3b82f6',
     fillOpacity: 0.08,
     strokeColor: '#3b82f6',
-    strokeOpacity: 0.3,
     strokeWeight: 1,
-    clickable: false
+    strokeOpacity: 0.3,
+    map: map,
+    clickable: false,
   });
 }
 
@@ -165,25 +259,18 @@ function recenterMap() {
 /* ═══════════════════════════════════════════
    LOAD NEARBY MECHANICS
    ═══════════════════════════════════════════ */
-
 async function loadNearbyMechanics() {
   const role = localStorage.getItem('vrs_user_role') || 'car_owner';
-  if (role === 'garage_owner') {
-    return loadCustomerRequests();
-  }
+  if (role === 'garage_owner') return loadCustomerRequests();
 
   clearMechanicMarkers();
-
   try {
     const res = await fetch(`/api/mechanics/nearby?lat=${userLat}&lng=${userLng}`);
     const data = await res.json();
     if (data.success && data.mechanics && data.mechanics.length > 0) {
       mechanicsWithDistance = data.mechanics;
-    } else {
-      throw new Error('No mechanics');
-    }
+    } else { throw new Error('No mechanics'); }
   } catch {
-    // Fallback to dummy mechanics near user
     mechanicsWithDistance = DUMMY_MECHANICS.map((m, i) => {
       const latOff = (i % 2 === 0 ? 1 : -1) * (0.005 + i * 0.002);
       const lngOff = (i % 3 === 0 ? 1 : -1) * (0.005 + i * 0.001);
@@ -193,7 +280,6 @@ async function loadNearbyMechanics() {
       return { ...m, latitude: lat, longitude: lng, distance: dist, eta: estimateETA(dist) };
     }).sort((a, b) => a.distance - b.distance);
   }
-
   filteredMechanics = [...mechanicsWithDistance];
   renderMechanicsOnMap();
   renderMechanicsList();
@@ -205,86 +291,89 @@ function clearMechanicMarkers() {
 }
 
 /* ═══════════════════════════════════════════
+   SVG ICON HELPERS
+   ═══════════════════════════════════════════ */
+function makeSvgIcon(emoji, border = '#ff2d55', size = 40) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <rect width="${size}" height="${size}" rx="10" fill="#1a1a28" stroke="${border}" stroke-width="2"/>
+    <text x="${size/2}" y="${size*0.65}" text-anchor="middle" font-size="18">${emoji}</text></svg>`;
+  return { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+    scaledSize: new google.maps.Size(size, size), anchor: new google.maps.Point(size/2, size/2) };
+}
+
+function makeCircleIcon(emoji, bg = '#ff2d55', size = 44) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${size/2}" cy="${size/2}" r="${size/2-2}" fill="${bg}" stroke="#fff" stroke-width="3"/>
+    <text x="${size/2}" y="${size*0.63}" text-anchor="middle" font-size="18">${emoji}</text></svg>`;
+  return { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+    scaledSize: new google.maps.Size(size, size), anchor: new google.maps.Point(size/2, size/2) };
+}
+
+/* ═══════════════════════════════════════════
    RENDER MECHANICS ON MAP
    ═══════════════════════════════════════════ */
-
 function renderMechanicsOnMap() {
   clearMechanicMarkers();
-
   filteredMechanics.forEach(mech => {
     const marker = new google.maps.Marker({
       position: { lat: mech.latitude, lng: mech.longitude },
       map: map,
-      icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-            <rect x="2" y="2" width="36" height="36" rx="10" fill="#1a1a28" stroke="#ff2d55" stroke-width="2"/>
-            <text x="20" y="26" text-anchor="middle" font-size="18">🔧</text>
-          </svg>
-        `),
-        scaledSize: new google.maps.Size(40, 40),
-        anchor: new google.maps.Point(20, 20)
-      },
+      icon: makeSvgIcon('🔧'),
+      zIndex: 100,
       title: mech.name,
-      zIndex: 10
     });
-
-    marker.addListener('click', () => selectMechanic(mech.id));
+    marker.addListener('click', () => {
+      infoWindow.setContent(`
+        <div style="background:#1a1a28;color:#e8e8ef;padding:12px 16px;border-radius:12px;font-family:'Inter',sans-serif;min-width:180px;">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${mech.name}</div>
+          <div style="font-size:12px;color:#8b8b9b;margin-bottom:6px;">${mech.specialization}</div>
+          <div style="display:flex;gap:12px;font-size:11px;color:#6b6b7b;">
+            <span>⭐ ${mech.rating}</span><span>📍 ${formatDistance(mech.distance)}</span><span>⏱️ ${mech.eta} min</span>
+          </div>
+          <button onclick="selectMechanic(${mech.id})" style="margin-top:10px;width:100%;padding:8px;background:#ff2d55;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">Select Mechanic</button>
+        </div>`);
+      infoWindow.open(map, marker);
+      selectMechanic(mech.id);
+    });
     mechanicGMarkers.push(marker);
   });
-
-  document.getElementById('mechCount').textContent = filteredMechanics.length;
+  const countEl = document.getElementById('mechCount');
+  if (countEl) countEl.textContent = filteredMechanics.length;
 }
 
 /* ═══════════════════════════════════════════
    RENDER MECHANICS LIST (Bottom Sheet)
    ═══════════════════════════════════════════ */
-
 function renderMechanicsList() {
   const container = document.getElementById('mechList');
   if (!container) return;
-
   if (filteredMechanics.length === 0) {
     container.innerHTML = '<div style="text-align:center;padding:20px;color:#6b6b7b;">No mechanics found nearby.</div>';
     return;
   }
-
   container.innerHTML = filteredMechanics.map(m => `
     <div class="mech-list-item" onclick="selectMechanic(${m.id})" id="mechItem-${m.id}">
       <div class="mech-avatar">${m.name.charAt(0)}</div>
       <div class="mech-details">
-        <div class="mech-name">
-          ${m.name}
-          ${m.verified ? '<span style="color:#2ed573;font-size:11px;">✓</span>' : ''}
-        </div>
+        <div class="mech-name">${m.name} ${m.verified ? '<span style="color:#2ed573;font-size:11px;">✓</span>' : ''}</div>
         <div class="mech-spec">${m.specialization}</div>
         <div class="mech-meta">
-          <span>⭐ ${m.rating}</span>
-          <span>📍 ${formatDistance(m.distance)}</span>
-          <span>🛡️ ${m.trust_score}</span>
+          <span>⭐ ${m.rating}</span><span>📍 ${formatDistance(m.distance)}</span><span>🛡️ ${m.trust_score}</span>
         </div>
       </div>
-      <div class="mech-eta-box">
-        <div class="mech-eta-val">${m.eta}</div>
-        <div class="mech-eta-lbl">min</div>
-      </div>
-    </div>
-  `).join('');
+      <div class="mech-eta-box"><div class="mech-eta-val">${m.eta}</div><div class="mech-eta-lbl">min</div></div>
+    </div>`).join('');
 }
 
 /* ═══════════════════════════════════════════
-   CAR OWNER FLOW — SELECT MECHANIC
+   SELECT MECHANIC
    ═══════════════════════════════════════════ */
-
 function selectMechanic(id) {
   selectedMechanic = mechanicsWithDistance.find(m => m.id === id);
   if (!selectedMechanic) return;
-
-  // Pan map
   map.panTo({ lat: selectedMechanic.latitude, lng: selectedMechanic.longitude });
   map.setZoom(16);
 
-  // Fill detail card
   document.getElementById('selAvatar').textContent = selectedMechanic.name.charAt(0);
   document.getElementById('selName').textContent = selectedMechanic.name;
   document.getElementById('selSpec').textContent = selectedMechanic.specialization;
@@ -294,142 +383,178 @@ function selectMechanic(id) {
   document.getElementById('selRating').textContent = '⭐ ' + selectedMechanic.rating;
   document.getElementById('selDist').textContent = formatDistance(selectedMechanic.distance);
   document.getElementById('selEta').textContent = selectedMechanic.eta;
-
   setState('selected');
 }
 
 function backToBrowse() {
   selectedMechanic = null;
-  directionsRenderer.setDirections({ routes: [] });
+  clearRoute();
   map.setCenter({ lat: userLat, lng: userLng });
   map.setZoom(15);
+  infoWindow.close();
   setState('browse');
 }
 
 /* ═══════════════════════════════════════════
-   CAR OWNER FLOW — REQUEST SERVICE
+   ROUTE HELPERS
    ═══════════════════════════════════════════ */
+function clearRoute() {
+  if (routePolyline) { routePolyline.setMap(null); routePolyline = null; }
+}
 
+async function fetchRoute(fromLat, fromLng, toLat, toLng) {
+  // Ensure all coordinates are valid numbers (MySQL DECIMAL returns strings)
+  fromLat = parseFloat(fromLat);
+  fromLng = parseFloat(fromLng);
+  toLat = parseFloat(toLat);
+  toLng = parseFloat(toLng);
+  if (isNaN(fromLat) || isNaN(fromLng) || isNaN(toLat) || isNaN(toLng)) {
+    console.warn('fetchRoute: invalid coordinates', { fromLat, fromLng, toLat, toLng });
+    return null;
+  }
+
+  // Try Google Directions
+  try {
+    const result = await new Promise((resolve, reject) => {
+      directionsService.route({
+        origin: { lat: fromLat, lng: fromLng },
+        destination: { lat: toLat, lng: toLng },
+        travelMode: google.maps.TravelMode.DRIVING,
+      }, (resp, status) => { status === 'OK' ? resolve(resp) : reject(status); });
+    });
+    const leg = result.routes[0].legs[0];
+    const coords = result.routes[0].overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
+    return { coords, distanceKm: (leg.distance.value/1000).toFixed(1), durationMin: Math.round(leg.duration.value/60),
+      distanceText: leg.distance.text, durationText: leg.duration.text };
+  } catch (e) { console.warn('Google Directions failed, trying OSRM:', e); }
+
+  // Fallback: OSRM
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code === 'Ok' && data.routes.length > 0) {
+      const r = data.routes[0];
+      const coords = r.geometry.coordinates.map(c => ({ lat: c[1], lng: c[0] }));
+      return { coords, distanceKm: (r.distance/1000).toFixed(1), durationMin: Math.round(r.duration/60),
+        distanceText: (r.distance/1000).toFixed(1)+' km', durationText: Math.round(r.duration/60)+' min' };
+    }
+  } catch (e) { console.warn('OSRM also failed:', e); }
+  return null;
+}
+
+function drawRoute(coords, color = '#ff2d55') {
+  clearRoute();
+  routePolyline = new google.maps.Polyline({
+    path: coords, geodesic: true, strokeColor: color, strokeOpacity: 0.9, strokeWeight: 5, map: map,
+  });
+  const bounds = new google.maps.LatLngBounds();
+  coords.forEach(c => bounds.extend(c));
+  map.fitBounds(bounds, { top: 80, bottom: 250, left: 30, right: 30 });
+  return routePolyline;
+}
+
+/* ═══════════════════════════════════════════
+   REPAIR DETAILS MODAL
+   ═══════════════════════════════════════════ */
+let repairInfo = { vehicleType: 'Car', repairType: 'Engine', description: '' };
+
+function openRepairModal() {
+  if (!selectedMechanic) return;
+  // Reset defaults
+  repairInfo = { vehicleType: 'Car', repairType: 'Engine', description: '' };
+  document.getElementById('repairDescription').value = '';
+  // Reset chip selections
+  document.querySelectorAll('#vehicleChips .repair-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.value === 'Car');
+  });
+  document.querySelectorAll('#repairChips .repair-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.value === 'Engine');
+  });
+  document.getElementById('repairModal').style.display = 'flex';
+}
+
+function closeRepairModal() {
+  document.getElementById('repairModal').style.display = 'none';
+}
+
+function selectChip(btn, groupId) {
+  document.querySelectorAll('#' + groupId + ' .repair-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  if (groupId === 'vehicleChips') repairInfo.vehicleType = btn.dataset.value;
+  if (groupId === 'repairChips') repairInfo.repairType = btn.dataset.value;
+}
+
+function submitRepairRequest() {
+  repairInfo.description = document.getElementById('repairDescription').value.trim();
+  closeRepairModal();
+  requestService();
+}
+
+/* ═══════════════════════════════════════════
+   REQUEST SERVICE
+   ═══════════════════════════════════════════ */
 function requestService() {
   if (!selectedMechanic) return;
-
   document.getElementById('searchMechName').textContent = selectedMechanic.name;
   setState('searching');
-
-  // Simulate mechanic accepting after 3-5 seconds
+  console.log('📋 Repair request:', repairInfo);
   setTimeout(() => {
-    if (currentState !== 'searching') return; // cancelled
+    if (currentState !== 'searching') return;
     showToast(`${selectedMechanic.name} accepted your request!`, 'success');
     startTracking();
   }, 3000 + Math.random() * 2000);
 }
 
 /* ═══════════════════════════════════════════
-   CAR OWNER FLOW — LIVE TRACKING
+   LIVE TRACKING
    ═══════════════════════════════════════════ */
-
-function startTracking() {
-  // Fill tracking card
+async function startTracking() {
   document.getElementById('trackAvatar').textContent = selectedMechanic.name.charAt(0);
   document.getElementById('trackName').textContent = selectedMechanic.name;
   document.getElementById('trackSpec').textContent = selectedMechanic.specialization;
   document.getElementById('trackPhone').textContent = '📞 ' + (selectedMechanic.phone || 'N/A');
-
   setState('tracking');
   document.getElementById('trackStatus').textContent = 'Mechanic En Route 🚗';
 
-  // Draw route from mechanic to user
-  const origin = { lat: selectedMechanic.latitude, lng: selectedMechanic.longitude };
-  const destination = { lat: userLat, lng: userLng };
-
-  directionsService.route({
-    origin: origin,
-    destination: destination,
-    travelMode: google.maps.TravelMode.DRIVING
-  }, (result, status) => {
-    if (status === 'OK') {
-      directionsRenderer.setDirections(result);
-
-      const leg = result.routes[0].legs[0];
-      document.getElementById('trackDist').textContent = leg.distance.text;
-      document.getElementById('trackEta').textContent = leg.duration.text;
-      document.getElementById('trackEtaBadge').textContent = leg.duration.text;
-
-      // Fit map to route bounds
-      map.fitBounds(result.routes[0].bounds);
-
-      // Extract path for animation
-      routePath = [];
-      result.routes[0].overview_path.forEach(p => {
-        routePath.push({ lat: p.lat(), lng: p.lng() });
-      });
-
-      // Start animated mechanic marker
-      routeStepIndex = 0;
-      placeAnimatedMechMarker(routePath[0]);
-      beginAnimation();
-    } else {
-      // Fallback: straight line animation
-      showToast('Route unavailable — simulating path.', 'warning');
-      document.getElementById('trackDist').textContent = formatDistance(selectedMechanic.distance);
-      document.getElementById('trackEta').textContent = selectedMechanic.eta + ' min';
-      document.getElementById('trackEtaBadge').textContent = selectedMechanic.eta + ' min';
-
-      routePath = interpolatePoints(origin, destination, 30);
-      routeStepIndex = 0;
-      placeAnimatedMechMarker(routePath[0]);
-      beginAnimation();
-    }
-  });
+  const routeData = await fetchRoute(selectedMechanic.latitude, selectedMechanic.longitude, userLat, userLng);
+  if (routeData) {
+    drawRoute(routeData.coords);
+    document.getElementById('trackDist').textContent = routeData.distanceText;
+    document.getElementById('trackEta').textContent = routeData.durationText;
+    document.getElementById('trackEtaBadge').textContent = routeData.durationText;
+    routePath = routeData.coords;
+  } else {
+    showToast('Route unavailable — simulating path.', 'warning');
+    document.getElementById('trackDist').textContent = formatDistance(selectedMechanic.distance);
+    document.getElementById('trackEta').textContent = selectedMechanic.eta + ' min';
+    document.getElementById('trackEtaBadge').textContent = selectedMechanic.eta + ' min';
+    routePath = interpolatePoints({ lat: selectedMechanic.latitude, lng: selectedMechanic.longitude }, { lat: userLat, lng: userLng }, 30);
+    drawRoute(routePath);
+  }
+  routeStepIndex = 0;
+  placeAnimatedMechMarker(routePath[0]);
+  beginAnimation();
 }
 
 function placeAnimatedMechMarker(pos) {
   if (animatedMechMarker) animatedMechMarker.setMap(null);
-
-  animatedMechMarker = new google.maps.Marker({
-    position: pos,
-    map: map,
-    icon: {
-      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
-          <circle cx="22" cy="22" r="20" fill="#ff2d55" stroke="#fff" stroke-width="3"/>
-          <text x="22" y="28" text-anchor="middle" font-size="18" fill="#fff">🚗</text>
-        </svg>
-      `),
-      scaledSize: new google.maps.Size(44, 44),
-      anchor: new google.maps.Point(22, 22)
-    },
-    zIndex: 200
-  });
+  animatedMechMarker = new google.maps.Marker({ position: pos, map: map, icon: makeCircleIcon('🚗'), zIndex: 2000 });
 }
 
 function beginAnimation() {
   if (trackingInterval) clearInterval(trackingInterval);
-
   trackingInterval = setInterval(() => {
     routeStepIndex++;
-
     if (routeStepIndex >= routePath.length) {
-      // Arrived!
-      clearInterval(trackingInterval);
-      trackingInterval = null;
-      mechanicArrived();
-      return;
+      clearInterval(trackingInterval); trackingInterval = null; mechanicArrived(); return;
     }
-
-    const pos = routePath[routeStepIndex];
-    if (animatedMechMarker) {
-      animatedMechMarker.setPosition(pos);
-    }
-
-    // Update remaining distance / ETA
+    if (animatedMechMarker) animatedMechMarker.setPosition(routePath[routeStepIndex]);
     const remaining = routePath.length - routeStepIndex;
-    const progress = Math.round((routeStepIndex / routePath.length) * 100);
     const etaMin = Math.max(1, Math.round((remaining / routePath.length) * selectedMechanic.eta));
     document.getElementById('trackEta').textContent = etaMin + ' min';
     document.getElementById('trackEtaBadge').textContent = etaMin + ' min';
-
-  }, 1500); // move every 1.5 seconds
+  }, 1500);
 }
 
 function mechanicArrived() {
@@ -447,16 +572,13 @@ function closeArrived() {
 /* ═══════════════════════════════════════════
    CANCEL REQUEST
    ═══════════════════════════════════════════ */
-
 function cancelRequest() {
   if (trackingInterval) { clearInterval(trackingInterval); trackingInterval = null; }
   if (animatedMechMarker) { animatedMechMarker.setMap(null); animatedMechMarker = null; }
-  directionsRenderer.setDirections({ routes: [] });
-  routePath = [];
-  routeStepIndex = 0;
-  selectedMechanic = null;
-  map.setCenter({ lat: userLat, lng: userLng });
-  map.setZoom(15);
+  clearRoute();
+  routePath = []; routeStepIndex = 0; selectedMechanic = null;
+  map.setCenter({ lat: userLat, lng: userLng }); map.setZoom(15);
+  if (infoWindow) infoWindow.close();
   setState('browse');
   showToast('Request cancelled.', 'info');
 }
@@ -464,15 +586,11 @@ function cancelRequest() {
 /* ═══════════════════════════════════════════
    STATE MANAGEMENT
    ═══════════════════════════════════════════ */
-
 function setState(state) {
   currentState = state;
-  const states = ['stateBrowse', 'stateSelected', 'stateSearching', 'stateTracking'];
-  states.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
+  ['stateBrowse','stateSelected','stateSearching','stateTracking'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
-
   switch(state) {
     case 'browse':    document.getElementById('stateBrowse').style.display = 'block'; break;
     case 'selected':  document.getElementById('stateSelected').style.display = 'block'; break;
@@ -484,41 +602,23 @@ function setState(state) {
 /* ═══════════════════════════════════════════
    GARAGE OWNER FLOW
    ═══════════════════════════════════════════ */
-
 async function loadCustomerRequests() {
-  // Dummy customer requests near the garage
   const requests = [
     { id: 'REQ-01', user_name: 'Arun M.', service: 'Engine Diagnosis', latitude: userLat + 0.008, longitude: userLng + 0.005, distance: 1.2, is_emergency: true },
     { id: 'REQ-02', user_name: 'Priya K.', service: 'Flat Tire Repair', latitude: userLat - 0.006, longitude: userLng - 0.003, distance: 2.1, is_emergency: false },
     { id: 'REQ-03', user_name: 'Sameer J.', service: 'Battery Jump Start', latitude: userLat + 0.003, longitude: userLng - 0.007, distance: 0.8, is_emergency: false },
   ];
-
   if (requests.length === 0) {
     document.getElementById('goStateIncoming').style.display = 'none';
     document.getElementById('goStateEmpty').style.display = 'block';
     return;
   }
-
   goCurrentRequest = requests[0];
   showIncomingRequest(goCurrentRequest);
-
-  // Show all request markers on map
   requests.forEach(req => {
     const marker = new google.maps.Marker({
-      position: { lat: req.latitude, lng: req.longitude },
-      map: map,
-      icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-            <rect x="2" y="2" width="36" height="36" rx="10" fill="#1a1a28" stroke="#ff2d55" stroke-width="2"/>
-            <text x="20" y="26" text-anchor="middle" font-size="18">🚨</text>
-          </svg>
-        `),
-        scaledSize: new google.maps.Size(40, 40),
-        anchor: new google.maps.Point(20, 20)
-      },
-      title: req.user_name,
-      zIndex: 10
+      position: { lat: req.latitude, lng: req.longitude }, map: map,
+      icon: makeSvgIcon('🚨'), zIndex: 100, title: req.user_name,
     });
     mechanicGMarkers.push(marker);
   });
@@ -533,42 +633,31 @@ function showIncomingRequest(req) {
   document.getElementById('goStateEmpty').style.display = 'none';
 }
 
-function acceptRequest() {
+async function acceptRequest() {
   if (!goCurrentRequest) return;
-
   showToast('Request accepted! Navigating to customer...', 'success');
   document.getElementById('goNavName').textContent = goCurrentRequest.user_name;
   document.getElementById('goNavService').textContent = goCurrentRequest.service;
-
   document.getElementById('goStateIncoming').style.display = 'none';
   document.getElementById('goStateNavigating').style.display = 'block';
 
-  // Draw route to customer
-  if (goRouteRenderer) goRouteRenderer.setMap(null);
-  goRouteRenderer = new google.maps.DirectionsRenderer({
-    map: map,
-    suppressMarkers: true,
-    polylineOptions: { strokeColor: '#2ed573', strokeWeight: 5, strokeOpacity: 0.8 }
-  });
-
-  directionsService.route({
-    origin: { lat: userLat, lng: userLng },
-    destination: { lat: goCurrentRequest.latitude, lng: goCurrentRequest.longitude },
-    travelMode: google.maps.TravelMode.DRIVING
-  }, (result, status) => {
-    if (status === 'OK') {
-      goRouteRenderer.setDirections(result);
-      const leg = result.routes[0].legs[0];
-      document.getElementById('goNavDist').textContent = leg.distance.text;
-      document.getElementById('goNavEtaVal').textContent = leg.duration.text;
-      document.getElementById('goNavEta').textContent = leg.duration.text;
-      map.fitBounds(result.routes[0].bounds);
-    } else {
-      document.getElementById('goNavDist').textContent = goCurrentRequest.distance + ' km';
-      document.getElementById('goNavEtaVal').textContent = estimateETA(goCurrentRequest.distance) + ' min';
-      document.getElementById('goNavEta').textContent = estimateETA(goCurrentRequest.distance) + ' min';
-    }
-  });
+  if (goRoutePolyline) { goRoutePolyline.setMap(null); goRoutePolyline = null; }
+  const routeData = await fetchRoute(userLat, userLng, goCurrentRequest.latitude, goCurrentRequest.longitude);
+  if (routeData) {
+    goRoutePolyline = new google.maps.Polyline({
+      path: routeData.coords, geodesic: true, strokeColor: '#2ed573', strokeOpacity: 0.8, strokeWeight: 5, map: map,
+    });
+    document.getElementById('goNavDist').textContent = routeData.distanceText;
+    document.getElementById('goNavEtaVal').textContent = routeData.durationText;
+    document.getElementById('goNavEta').textContent = routeData.durationText;
+    const bounds = new google.maps.LatLngBounds();
+    routeData.coords.forEach(c => bounds.extend(c));
+    map.fitBounds(bounds, { top: 80, bottom: 250, left: 30, right: 30 });
+  } else {
+    document.getElementById('goNavDist').textContent = goCurrentRequest.distance + ' km';
+    document.getElementById('goNavEtaVal').textContent = estimateETA(goCurrentRequest.distance) + ' min';
+    document.getElementById('goNavEta').textContent = estimateETA(goCurrentRequest.distance) + ' min';
+  }
 }
 
 function rejectRequest() {
@@ -579,7 +668,7 @@ function rejectRequest() {
 }
 
 function finishNavigation() {
-  if (goRouteRenderer) goRouteRenderer.setMap(null);
+  if (goRoutePolyline) { goRoutePolyline.setMap(null); goRoutePolyline = null; }
   document.getElementById('arrivedOverlay').style.display = 'flex';
   document.getElementById('arrivedTitle').textContent = 'You Have Arrived!';
   document.getElementById('arrivedText').textContent = 'You are at the customer location. Begin the repair service.';
@@ -588,15 +677,11 @@ function finishNavigation() {
 /* ═══════════════════════════════════════════
    HELPERS
    ═══════════════════════════════════════════ */
-
 function interpolatePoints(start, end, steps) {
   const points = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
-    points.push({
-      lat: start.lat + (end.lat - start.lat) * t,
-      lng: start.lng + (end.lng - start.lng) * t
-    });
+    points.push({ lat: start.lat + (end.lat - start.lat) * t, lng: start.lng + (end.lng - start.lng) * t });
   }
   return points;
 }

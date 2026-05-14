@@ -63,14 +63,7 @@
   </div>
 
   <script>
-    // DUMMY BOOKINGS DATA
-    const initialBookings = [
-      { id: 'REQ-01', user: 'Arun M.', vehicle: 'Honda City', issue: 'Engine overheating, producing smoke', phone: '+91 98****1234', status: 'pending', distance: '1.2 km' },
-      { id: 'REQ-02', user: 'Priya K.', vehicle: 'Hyundai i20', issue: 'Flat tire near highway exit', phone: '+91 99****5678', status: 'pending', distance: '3.4 km' },
-      { id: 'REQ-03', user: 'Sameer J.', vehicle: 'Royal Enfield', issue: 'Battery completely dead', phone: '+91 91****0001', status: 'pending', distance: '0.8 km' },
-    ];
-
-    let currentDummyBookings = [];
+    let currentBookings = [];
 
     // Initialize Event Listener
     document.addEventListener('DOMContentLoaded', () => {
@@ -104,9 +97,10 @@
       // Add success toast
       showSuccessMessage('Garage registered successfully!');
       
-      // Reset dummy bookings map when logging in
-      currentDummyBookings = JSON.parse(JSON.stringify(initialBookings));
-      renderBookings();
+      // Fetch real bookings from DB when logging in
+      fetchBookings();
+      // Optional: Poll every 10 seconds for new requests
+      setInterval(fetchBookings, 10000);
     }
 
     function logout() {
@@ -116,11 +110,36 @@
       document.getElementById('registerForm').reset();
     }
 
-    function updateBookingStatus(id, newStatus) {
-      const booking = currentDummyBookings.find(b => b.id === id);
-      if (booking) {
-        booking.status = newStatus;
-        renderBookings();
+    async function fetchBookings() {
+      try {
+        const res = await fetch('/api/bookings/all');
+        const data = await res.json();
+        if (data.success) {
+          currentBookings = data.bookings;
+          renderBookings();
+        }
+      } catch (err) {
+        console.error('Failed to fetch bookings:', err);
+      }
+    }
+
+    async function updateBookingStatus(id, newStatus) {
+      try {
+        const res = await fetch(`/api/bookings/${id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          showSuccessMessage(`Request ${newStatus === 'accepted' ? 'Accepted' : 'Rejected'}`);
+          fetchBookings(); // Refresh list
+        } else {
+          alert('Failed to update status: ' + data.error);
+        }
+      } catch (err) {
+        console.error('Status update failed:', err);
       }
     }
 
@@ -128,12 +147,12 @@
       const container = document.getElementById('bookingsList');
       container.innerHTML = '';
       
-      if (currentDummyBookings.length === 0) {
+      if (currentBookings.length === 0) {
         container.innerHTML = '<div class="card text-center" style="color:var(--text-secondary)">No incoming requests.</div>';
         return;
       }
 
-      currentDummyBookings.forEach(booking => {
+      currentBookings.forEach(booking => {
         let statusBadge = '';
         let actionButtons = '';
 
@@ -164,14 +183,13 @@
         const html = `
           <div class="booking-card animate-slideUp">
             <div class="booking-header">
-              <strong>${booking.id} — ${booking.user}</strong>
+              <strong>${booking.id} — ${booking.user_name || booking.user_id}</strong>
               ${statusBadge}
             </div>
             <div style="font-size:var(--fs-sm); color:var(--text-secondary);">
-              <div style="margin-bottom: 4px;">🚗 <strong style="color:var(--text-primary);">Vehicle:</strong> ${booking.vehicle}</div>
-              <div style="margin-bottom: 4px;">📍 <strong style="color:var(--text-primary);">Distance:</strong> ${booking.distance}</div>
-              <div style="margin-bottom: 4px;">📞 <strong style="color:var(--text-primary);">Contact:</strong> ${booking.phone}</div>
-              <div style="color:var(--emergency-red); margin-top: 8px;">⚠️ ${booking.issue}</div>
+              <div style="margin-bottom: 4px;">🚗 <strong style="color:var(--text-primary);">Vehicle:</strong> ${booking.vehicle_type}</div>
+              <div style="margin-bottom: 4px;">📞 <strong style="color:var(--text-primary);">Contact:</strong> User Phone</div>
+              <div style="color:var(--emergency-red); margin-top: 8px;">⚠️ ${booking.issue_description || 'General Service'}</div>
             </div>
             ${actionButtons}
           </div>

@@ -108,12 +108,12 @@ CREATE TABLE IF NOT EXISTS admin_actions (
 
 -- ── Seed Mechanics ──
 INSERT INTO mechanics (name, phone, specialization, rating, total_reviews, completed_bookings, verified, trust_score, verified_at, latitude, longitude, is_available) VALUES
-('Rajesh Kumar', '+91-9876543210', 'Engine Specialist', 4.8, 156, 180, TRUE, 9.6, '2025-12-01 10:00:00', 18.52040000, 73.85670000, TRUE),
-('Priya Patel', '+91-9876543211', 'Electrical & Battery', 4.6, 89, 102, TRUE, 8.4, '2025-12-15 10:00:00', 18.52800000, 73.86500000, TRUE),
-('Ajay Singh', '+91-9876543212', 'Tire & Suspension', 4.9, 234, 260, TRUE, 10.0, '2025-11-20 10:00:00', 18.51500000, 73.84800000, TRUE),
-('Sneha Deshmukh', '+91-9876543213', 'General Mechanic', 4.5, 67, 75, FALSE, 5.2, NULL, 18.53200000, 73.87200000, FALSE),
-('Rahul Mehta', '+91-9876543214', 'AC & Cooling', 4.7, 112, 130, TRUE, 9.0, '2026-01-10 10:00:00', 18.51000000, 73.86000000, TRUE),
-('Amit Verma', '+91-9876543215', 'Brake Specialist', 4.4, 45, 50, FALSE, 4.5, NULL, 18.53500000, 73.85000000, TRUE);
+('Rajesh Kumar', '+91-9876543210', 'Engine Specialist', 4.8, 156, 180, TRUE, 9.6, '2025-12-01 10:00:00', 11.94500000, 79.81200000, TRUE),
+('Priya Patel', '+91-9876543211', 'Electrical & Battery', 4.6, 89, 102, TRUE, 8.4, '2025-12-15 10:00:00', 11.93800000, 79.82000000, TRUE),
+('Ajay Singh', '+91-9876543212', 'Tire & Suspension', 4.9, 234, 260, TRUE, 10.0, '2025-11-20 10:00:00', 11.95200000, 79.80500000, TRUE),
+('Sneha Deshmukh', '+91-9876543213', 'General Mechanic', 4.5, 67, 75, FALSE, 5.2, NULL, 11.93200000, 79.82500000, FALSE),
+('Rahul Mehta', '+91-9876543214', 'AC & Cooling', 4.7, 112, 130, TRUE, 9.0, '2026-01-10 10:00:00', 11.94800000, 79.80000000, TRUE),
+('Amit Verma', '+91-9876543215', 'Brake Specialist', 4.4, 45, 50, FALSE, 4.5, NULL, 11.95500000, 79.81800000, TRUE);
 
 -- ── Seed Services ──
 INSERT INTO services (name, category, base_price, description, estimated_time_minutes) VALUES
@@ -139,9 +139,9 @@ INSERT INTO vehicles (user_id, make, model, year, license_plate, color) VALUES
 
 -- ── Seed Bookings ──
 INSERT INTO bookings (id, user_id, mechanic_id, service_id, status, vehicle_type, issue_description, latitude, longitude, total_price, created_at, completed_at) VALUES
-('BK001', 'demo-user-123', 3, 1, 'completed', 'car', 'Flat tire on highway', 18.52040000, 73.85670000, 1200.00, '2026-03-18 10:30:00', '2026-03-18 11:15:00'),
-('BK002', 'demo-user-123', 2, 3, 'completed', 'car', 'Battery dead, car won''t start', 18.52100000, 73.85700000, 800.00, '2026-03-15 14:15:00', '2026-03-15 14:45:00'),
-('BK003', 'demo-user-123', 1, 5, 'completed', 'bike', 'Engine overheating', 18.51900000, 73.85550000, 3500.00, '2026-03-10 09:00:00', '2026-03-10 10:30:00');
+('BK001', 'demo-user-123', 3, 1, 'completed', 'car', 'Flat tire on highway', 11.94160000, 79.80830000, 1200.00, '2026-03-18 10:30:00', '2026-03-18 11:15:00'),
+('BK002', 'demo-user-123', 2, 3, 'completed', 'car', 'Battery dead, car won''t start', 11.94200000, 79.81000000, 800.00, '2026-03-15 14:15:00', '2026-03-15 14:45:00'),
+('BK003', 'demo-user-123', 1, 5, 'completed', 'bike', 'Engine overheating', 11.94000000, 79.80700000, 3500.00, '2026-03-10 09:00:00', '2026-03-10 10:30:00');
 
 -- ── Seed Reviews ──
 INSERT INTO reviews (booking_id, user_id, mechanic_id, rating, comment) VALUES

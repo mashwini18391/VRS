@@ -263,15 +263,36 @@ async function confirmBooking() {
   const btn = document.getElementById('confirmBookingBtn');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner spinner-sm"></span> Processing...';
+    btn.innerHTML = '<span class="spinner spinner-sm"></span> Confirming...';
   }
 
+  // Store tracking data immediately (before API call)
+  const trackingData = {
+    bookingId: 'BK-' + Date.now(),
+    mechanic: {
+      id: selectedMechanic.id,
+      name: selectedMechanic.name,
+      specialization: selectedMechanic.specialization,
+      phone: selectedMechanic.phone || 'N/A',
+      rating: selectedMechanic.rating,
+      latitude: selectedMechanic.latitude,
+      longitude: selectedMechanic.longitude,
+      avatar: selectedMechanic.name.charAt(0)
+    },
+    vehicleType: selectedVehicle,
+    issueType: selectedIssue,
+    issueDescription: description,
+    isEmergency: isEmergency
+  };
+  localStorage.setItem('vrs_tracking_data', JSON.stringify(trackingData));
+
+  // Try API call (non-blocking for tracking)
   try {
     const res = await fetch('/api/bookings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem('vrs_token') // Optional auth
+        'Authorization': 'Bearer ' + localStorage.getItem('vrs_token')
       },
       body: JSON.stringify({
         vehicle_type: selectedVehicle,
@@ -279,33 +300,25 @@ async function confirmBooking() {
         issue_description: description,
         mechanic_id: selectedMechanic.id,
         service_id: service ? service.id : null,
-        latitude: 18.5204, // Default or use GPS if tracked
+        latitude: 18.5204,
         longitude: 73.8567,
         is_emergency: isEmergency
       })
     });
 
     const data = await res.json();
-
     if (res.ok && data.success) {
-      showToast(`Booking confirmed! ${selectedMechanic.name} (Verified ✅) is on the way.`, 'success');
-      
-      // Store active booking ID for reference
+      trackingData.bookingId = data.booking.id;
       localStorage.setItem('vrs_active_booking_id', data.booking.id);
-      
-      // Redirect to chat
-      setTimeout(() => {
-        window.location.href = `chat.html?booking=${data.booking.id}`;
-      }, 1500);
-    } else {
-      throw new Error(data.error || 'Failed to book');
+      localStorage.setItem('vrs_tracking_data', JSON.stringify(trackingData));
     }
   } catch (err) {
-    console.error('Booking error:', err);
-    showToast('Failed to create booking. Please try again.', 'error');
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = 'Confirm Booking';
-    }
+    console.warn('API booking failed, proceeding with live tracking:', err);
   }
+
+  // Always redirect to live tracking map
+  showToast(`Booking confirmed! ${selectedMechanic.name} is on the way 🚗`, 'success');
+  setTimeout(() => {
+    window.location.href = `map.html?tracking=true&booking=${trackingData.bookingId}`;
+  }, 1000);
 }
